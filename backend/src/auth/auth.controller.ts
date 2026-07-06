@@ -8,10 +8,10 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
 
 // Type for the Express request object after JwtStrategy attaches req.user
@@ -38,10 +38,9 @@ export class AuthController {
   }
 
   // GET /api/auth/me — returns the logged-in user's profile
-  // AuthGuard('jwt') verifies the Bearer token and populates req.user via JwtStrategy
-  // Step 3.7 replaces AuthGuard('jwt') with the custom JwtAuthGuard class
+  // JwtAuthGuard verifies the Bearer token and populates req.user via JwtStrategy
   @Get('me')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   getMe(@Request() req: RequestWithUser) {
     // req.user.userId comes from JwtStrategy.validate() — it's the UUID from the token
     return this.authService.getMe(req.user.userId);

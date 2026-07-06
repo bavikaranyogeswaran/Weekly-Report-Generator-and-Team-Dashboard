@@ -7,6 +7,7 @@ import { User } from '../users/entities/user.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -32,6 +33,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   ],
   controllers: [AuthController],
   // JwtStrategy must be a provider so Passport can discover and use it
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+
+  // Export JwtAuthGuard so any other module (Reports, Dashboard, etc.) can import
+  // AuthModule and use @UseGuards(JwtAuthGuard) without re-declaring it
+  exports: [JwtAuthGuard],
 })
 export class AuthModule {}

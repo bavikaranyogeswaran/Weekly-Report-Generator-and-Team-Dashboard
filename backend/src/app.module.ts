@@ -1,12 +1,25 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { envValidationSchema } from './config/env.validation';
+import { databaseConfig } from './config/database.config';
 
 @Module({
   imports: [
-    // Load .env file and make process.env variables available everywhere
-    ConfigModule.forRoot({ isGlobal: true }),
+    // Load .env and validate all required variables at startup
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: envValidationSchema,
+    }),
+
+    // Connect to PostgreSQL — all values injected from ConfigService (no hardcoding)
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: databaseConfig,
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],

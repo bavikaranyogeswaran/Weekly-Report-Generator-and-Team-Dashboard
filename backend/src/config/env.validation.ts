@@ -12,6 +12,7 @@ export const envValidationSchema = Joi.object({
 
   // Auth
   JWT_SECRET: Joi.string().min(16).required(),
+  JWT_EXPIRES_IN: Joi.string().default('7d'), // e.g. 7d, 24h, 3600s
 
   // AI
   GEMINI_API_KEY: Joi.string().required(),

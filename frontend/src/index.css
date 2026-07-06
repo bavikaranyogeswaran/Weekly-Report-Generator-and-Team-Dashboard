@@ -1,0 +1,4 @@
+/* Tailwind's three layers — this is all you need to enable Tailwind classes */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

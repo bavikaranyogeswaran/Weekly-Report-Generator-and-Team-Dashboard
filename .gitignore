@@ -1,0 +1,51 @@
+# ─── Environment Variables ────────────────────────────────────────────────────
+# Never commit secrets or credentials
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# ─── Node Modules ─────────────────────────────────────────────────────────────
+# Dependencies for both backend and frontend
+node_modules/
+
+# ─── Build Outputs ────────────────────────────────────────────────────────────
+# NestJS compiled output
+backend/dist/
+
+# Vite / React compiled output
+frontend/dist/
+frontend/.vite/
+
+# ─── TypeScript ───────────────────────────────────────────────────────────────
+*.tsbuildinfo
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Test Coverage ────────────────────────────────────────────────────────────
+coverage/
+backend/coverage/
+frontend/coverage/
+
+# ─── Cache ────────────────────────────────────────────────────────────────────
+.npm/
+.eslintcache
+.cache/
+
+# ─── OS Files ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ─── Editor / IDE ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

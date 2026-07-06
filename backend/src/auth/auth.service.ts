@@ -69,4 +69,18 @@ export class AuthService {
     const accessToken = await this.jwtService.signAsync(payload);
     return { access_token: accessToken };
   }
+
+  // Returns the full profile of the currently logged-in user (without the password hash)
+  async getMe(userId: string) {
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+
+    // This should never happen if the JWT is valid, but guard against stale tokens
+    if (!user) {
+      throw new UnauthorizedException('User account no longer exists');
+    }
+
+    // Strip the password hash before returning
+    const { passwordHash: _removed, ...safeUser } = user;
+    return safeUser;
+  }
 }

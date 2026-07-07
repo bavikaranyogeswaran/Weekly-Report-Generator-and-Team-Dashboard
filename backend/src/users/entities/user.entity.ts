@@ -36,8 +36,9 @@ export class User {
   isVerified: boolean;
 
   // One-time token emailed on registration — cleared after the user verifies
+  // type must be explicit because TypeORM can't infer the SQL type from `string | null`
   // select: false means it is never included in normal SELECT * queries
-  @Column({ name: 'verification_token', nullable: true, select: false })
+  @Column({ name: 'verification_token', type: 'varchar', nullable: true, select: false })
   verificationToken: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

@@ -31,6 +31,15 @@ export class User {
   @Column({ type: 'enum', enum: Role, default: Role.MEMBER })
   role: Role;
 
+  // True once the user clicks the link in the verification email
+  @Column({ name: 'is_verified', default: false })
+  isVerified: boolean;
+
+  // One-time token emailed on registration — cleared after the user verifies
+  // select: false means it is never included in normal SELECT * queries
+  @Column({ name: 'verification_token', nullable: true, select: false })
+  verificationToken: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

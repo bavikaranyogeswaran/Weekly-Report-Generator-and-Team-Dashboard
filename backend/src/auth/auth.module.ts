@@ -9,11 +9,15 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
     // Register the User entity so AuthService can inject the User repository
     TypeOrmModule.forFeature([User]),
+
+    // Provides EmailService for sending the verification email on registration
+    EmailModule,
 
     // Passport is required by the JWT strategy added in step 3.3
     PassportModule,

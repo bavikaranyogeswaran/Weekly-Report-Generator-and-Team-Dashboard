@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -30,6 +31,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  // GET /api/auth/verify-email?token=xxx — verifies a user's email from the link in the email
+  @Get('verify-email')
+  @HttpCode(HttpStatus.OK)
+  verifyEmail(@Query('token') token: string) {
+    return this.authService.verifyEmail(token);
   }
 
   // GET /api/auth/me — returns the logged-in user's profile

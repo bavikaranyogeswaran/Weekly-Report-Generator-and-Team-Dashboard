@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from './entities/project.entity';
+import { User } from '../users/entities/user.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 
@@ -15,6 +16,10 @@ export class ProjectsService {
     // Inject the Project repository to query the projects table
     @InjectRepository(Project)
     private readonly projectsRepo: Repository<Project>,
+
+    // Inject the User repository to look up users when assigning members
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
   ) {}
 
   // Creates a new project — rejects duplicate names with 409
@@ -68,5 +73,40 @@ export class ProjectsService {
     const project = await this.findOne(id);
     await this.projectsRepo.remove(project);
     return { message: 'Project deleted successfully' };
+  }
+
+  // Assigns a user to a project — silently ignores if they are already a member
+  async addMember(projectId: string, userId: string) {
+    const project = await this.findOne(projectId); // already loads members relation
+
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Avoid duplicates in the join table
+    const alreadyMember = project.members.some((m) => m.id === userId);
+    if (!alreadyMember) {
+      project.members.push(user);
+      await this.projectsRepo.save(project);
+    }
+
+    return this.findOne(projectId); // return the updated project with fresh members list
+  }
+
+  // Removes a user from a project — 404 if the project or user does not exist
+  async removeMember(projectId: string, userId: string) {
+    const project = await this.findOne(projectId); // already loads members relation
+
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Filter out the target user from the in-memory members array and persist
+    project.members = project.members.filter((m) => m.id !== userId);
+    await this.projectsRepo.save(project);
+
+    return this.findOne(projectId); // return the updated project with fresh members list
   }
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import type Mail from 'nodemailer/lib/mailer';
+import { Role } from '../common/enums/role.enum';
 
 @Injectable()
 export class EmailService {
@@ -53,6 +54,26 @@ export class EmailService {
     });
   }
 
+  // Notifies a user that a manager has changed their role.
+  // If SMTP is not configured, prints a message to the console instead.
+  async sendRoleAssignedEmail(to: string, name: string, newRole: Role): Promise<void> {
+    if (!this.transporter) {
+      console.log(
+        `\n[Email] No SMTP configured. Role notification for ${to}: role set to ${newRole}\n`,
+      );
+      return;
+    }
+
+    const from = this.config.get<string>('SMTP_FROM') ?? 'noreply@weeklyreports.dev';
+
+    await this.transporter.sendMail({
+      from: `"Weekly Reports" <${from}>`,
+      to,
+      subject: `Your role has been updated to ${newRole}`,
+      html: this.buildRoleAssignedHtml(name, newRole),
+    });
+  }
+
   // Simple HTML template for the verification email
   private buildVerificationHtml(name: string, verifyUrl: string): string {
     return `
@@ -75,6 +96,37 @@ export class EmailService {
             <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
             <p style="color: #999; font-size: 12px; margin: 0;">
               If you did not create an account, you can safely ignore this email.
+            </p>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  // HTML template for the role-assignment notification email
+  private buildRoleAssignedHtml(name: string, newRole: Role): string {
+    // Tailor the message depending on which role was assigned
+    const isManager = newRole === Role.MANAGER;
+    const roleLabel = isManager ? 'Manager' : 'Member';
+    const detail = isManager
+      ? 'You now have access to the team dashboard, can view all submitted reports, and can manage your team.'
+      : 'You can submit weekly reports and track your own progress.';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; margin: 0;">
+          <div style="max-width: 520px; margin: 0 auto; background: white; border-radius: 10px; padding: 32px;">
+            <h2 style="color: #4f46e5; margin-top: 0;">Weekly Report Generator</h2>
+            <p>Hi <strong>${name}</strong>,</p>
+            <p>
+              Your account role has been updated by a manager.
+              You are now a <strong>${roleLabel}</strong>.
+            </p>
+            <p style="color: #555;">${detail}</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+            <p style="color: #999; font-size: 12px; margin: 0;">
+              If you believe this was done in error, please contact your manager.
             </p>
           </div>
         </body>

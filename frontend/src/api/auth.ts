@@ -23,6 +23,6 @@ export const login = (data: { email: string; password: string }) =>
 export const getMe = (token?: string) =>
   api.get<AuthUser>('/auth/me', token ? { headers: { Authorization: `Bearer ${token}` } } : {})
 
-// GET /auth/verify?token=... — email verification link handler
+// GET /auth/verify-email?token=... — email verification link handler
 export const verifyEmail = (token: string) =>
-  api.get<{ message: string }>(`/auth/verify?token=${token}`)
+  api.get<{ message: string }>(`/auth/verify-email?token=${token}`)

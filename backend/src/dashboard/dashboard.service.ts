@@ -77,6 +77,42 @@ export class DashboardService {
     }));
   }
 
+  // Returns the last N weeks with submitted-report counts — drives the trend line chart.
+  // Weeks with zero submissions are included so the chart has a continuous x-axis.
+  async getWeeklyTrends(weeks = 8) {
+    const tz = this.config.get<string>('APP_TIMEZONE') ?? 'Asia/Colombo';
+
+    const currentMonday = this.getCurrentWeekMonday();
+
+    // Build YYYY-MM-DD labels for the last N weeks, oldest first
+    const weekLabels: string[] = [];
+    for (let i = weeks - 1; i >= 0; i--) {
+      const monday = new Date(currentMonday);
+      monday.setDate(currentMonday.getDate() - i * 7);
+      weekLabels.push(monday.toLocaleDateString('en-CA', { timeZone: tz }));
+    }
+
+    // Single GROUP BY query for the whole date range — avoids N round trips
+    // TO_CHAR ensures the key format matches our weekLabels strings exactly
+    const rows = await this.reportsRepo
+      .createQueryBuilder('report')
+      .select("TO_CHAR(report.weekStart, 'YYYY-MM-DD')", 'weekLabel')
+      .addSelect('COUNT(*)', 'submitted')
+      .where('report.status = :status', { status: ReportStatus.SUBMITTED })
+      .andWhere('report.weekStart >= :startDate', { startDate: weekLabels[0] })
+      .groupBy('report.weekStart')
+      .orderBy('report.weekStart', 'ASC')
+      .getRawMany<{ weekLabel: string; submitted: string }>();
+
+    // Map weekLabel → count for O(1) lookup when filling in zero weeks
+    const countMap = new Map(rows.map((r) => [r.weekLabel, parseInt(r.submitted, 10)]));
+
+    return weekLabels.map((weekStart) => ({
+      weekStart,
+      submitted: countMap.get(weekStart) ?? 0,
+    }));
+  }
+
   // Parses a YYYY-MM-DD string into a local-midnight Date (avoids UTC shift from new Date(str))
   private parseDateString(dateStr: string): Date {
     const [year, month, day] = dateStr.split('-').map(Number);

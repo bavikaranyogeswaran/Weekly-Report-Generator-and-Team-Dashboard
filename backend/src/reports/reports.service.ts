@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Report } from './entities/report.entity';
 import { Project } from '../projects/entities/project.entity';
 import { CreateReportDto } from './dto/create-report.dto';
+import { UpdateReportDto } from './dto/update-report.dto';
 import { ReportQueryDto } from './dto/report-query.dto';
 import { ReportStatus } from '../common/enums/report-status.enum';
 import { Role } from '../common/enums/role.enum';
@@ -73,6 +79,46 @@ export class ReportsService {
 
     // Strip passwordHash from every loaded user before returning
     return reports.map((r) => this.stripUserPassword(r));
+  }
+
+  // Returns a single report — MEMBER can only view their own (403 otherwise)
+  async findOne(id: string, userId: string, role: Role) {
+    const report = await this.reportsRepo.findOne({
+      where: { id },
+      relations: { user: true, project: true },
+    });
+
+    if (!report) {
+      throw new NotFoundException('Report not found');
+    }
+
+    // Members must not be able to read other members' reports
+    if (role === Role.MEMBER && report.userId !== userId) {
+      throw new ForbiddenException('You can only view your own reports');
+    }
+
+    return this.stripUserPassword(report);
+  }
+
+  // Applies a partial update — only DRAFT reports can be edited, and only by their owner
+  async update(id: string, userId: string, dto: UpdateReportDto) {
+    const report = await this.findOne(id, userId, Role.MEMBER); // ownership check built-in
+
+    if (report.status !== ReportStatus.DRAFT) {
+      throw new BadRequestException('Only DRAFT reports can be edited');
+    }
+
+    // Validate new projectId if it is being changed
+    if (dto.projectId && dto.projectId !== report.projectId) {
+      const project = await this.projectsRepo.findOne({ where: { id: dto.projectId } });
+      if (!project) {
+        throw new NotFoundException('Project not found');
+      }
+    }
+
+    Object.assign(report, dto);
+    const saved = await this.reportsRepo.save(report);
+    return this.stripUserPassword(saved);
   }
 
   // Removes passwordHash from the nested user object on a report

@@ -47,6 +47,42 @@ export class DashboardService {
     };
   }
 
+  // For every user shows whether they have SUBMITTED, have a DRAFT, or are MISSING
+  // for the given week. Defaults to the current week when weekStart is omitted.
+  async getSubmissionStatus(weekStart?: string) {
+    const tz = this.config.get<string>('APP_TIMEZONE') ?? 'Asia/Colombo';
+
+    // Use the provided date or fall back to this week's Monday in the configured timezone
+    const targetDate = weekStart
+      ? this.parseDateString(weekStart)
+      : this.getCurrentWeekMonday();
+
+    // Fetch all users and all reports for the target week in parallel
+    const [users, reports] = await Promise.all([
+      this.usersRepo.find({ order: { name: 'ASC' } }),
+      this.reportsRepo.find({
+        where: { weekStart: targetDate },
+        select: { userId: true, status: true },
+      }),
+    ]);
+
+    // Build a userId → status map for O(1) lookup per user
+    const reportMap = new Map(reports.map((r) => [r.userId, r.status]));
+
+    return users.map(({ passwordHash: _pw, ...safeUser }) => ({
+      user: safeUser,
+      // SUBMITTED / DRAFT come from the report; no report at all = MISSING
+      status: reportMap.get(safeUser.id) ?? 'MISSING',
+      weekStart: targetDate.toLocaleDateString('en-CA', { timeZone: tz }),
+    }));
+  }
+
+  // Parses a YYYY-MM-DD string into a local-midnight Date (avoids UTC shift from new Date(str))
+  private parseDateString(dateStr: string): Date {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
   // Returns the Date of the Monday that started the current week, in the configured timezone.
   // Using APP_TIMEZONE ensures week boundaries align with the team's local calendar.
   protected getCurrentWeekMonday(): Date {

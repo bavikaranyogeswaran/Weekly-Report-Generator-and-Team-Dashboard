@@ -32,4 +32,7 @@ export const envValidationSchema = Joi.object({
 
   // Base URL used to build the verification link (e.g. http://localhost:3000 in dev)
   APP_URL: Joi.string().default('http://localhost:3000'),
+
+  // IANA timezone name used for all date calculations (week boundaries, "today", etc.)
+  APP_TIMEZONE: Joi.string().default('Asia/Colombo'),
 });

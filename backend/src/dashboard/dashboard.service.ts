@@ -77,6 +77,26 @@ export class DashboardService {
     }));
   }
 
+  // Returns the most recently submitted reports with nested user and project info.
+  // Drives the activity feed on the manager dashboard.
+  async getActivityFeed(limit = 10) {
+    const reports = await this.reportsRepo.find({
+      where: { status: ReportStatus.SUBMITTED },
+      relations: { user: true, project: true },
+      order: { submittedAt: 'DESC' },
+      take: limit, // cap results — default 10, caller can request more
+    });
+
+    // Strip passwordHash from every nested user before returning
+    return reports.map((r) => {
+      if (r.user) {
+        const { passwordHash: _pw, ...safeUser } = r.user as any;
+        (r as any).user = safeUser;
+      }
+      return r;
+    });
+  }
+
   // Returns total hours worked per user (sum across all SUBMITTED reports).
   // All users are included — those with no submissions get totalHours: 0.
   // Drives the workload bar chart on the manager dashboard.

@@ -45,6 +45,28 @@ export class AiService {
     }
   }
 
+  // Answers a manager's question using live team report data as context.
+  async chat(message: string): Promise<{ reply: string }> {
+    const context = await this.buildTeamContext();
+
+    // System prompt tells the model its role, then injects the live team data,
+    // then appends the manager's question at the end
+    const prompt = [
+      `You are a helpful assistant for a team manager using a weekly report dashboard.`,
+      `Your job is to answer questions about the team's weekly reports clearly and concisely.`,
+      `Use only the data provided below — do not make up information.`,
+      `If the data does not contain enough information to answer, say so honestly.`,
+      ``,
+      context,
+      ``,
+      `=== MANAGER'S QUESTION ===`,
+      message,
+    ].join('\n');
+
+    const reply = await this.generate(prompt);
+    return { reply };
+  }
+
   // Builds a structured text block from live team data so the model can reason over it.
   // Includes this week's submission status and the last 20 submitted reports.
   async buildTeamContext(): Promise<string> {

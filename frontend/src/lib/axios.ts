@@ -18,16 +18,20 @@ api.interceptors.request.use((config) => {
 })
 
 // Response interceptor — on 401, clear local auth state and send the user to login.
-// window.location.href is intentional here: a full reload is fine for an expired session,
+// Exception: skip the redirect for /auth/login itself — a 401 there just means wrong
+// credentials, and the LoginPage's own catch block handles that error display.
+// window.location.href is intentional: a full reload is fine for an expired session,
 // and we cannot use React Router's navigate() outside of a component.
 api.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
-    const status =
-      axios.isAxiosError(error) ? error.response?.status : undefined
-    if (status === 401) {
-      useAuthStore.getState().logout()
-      window.location.href = '/login'
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status
+      const url = error.config?.url ?? ''
+      if (status === 401 && !url.includes('/auth/login')) {
+        useAuthStore.getState().logout()
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   },

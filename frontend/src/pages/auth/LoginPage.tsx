@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import InputField from '@/components/ui/InputField'
 import Button from '@/components/ui/Button'
 import { login, getMe } from '@/api/auth'
@@ -24,17 +25,19 @@ export default function LoginPage() {
   const [form, setForm] = useState<FormData>({ email: '', password: '' })
   const [errors, setErrors] = useState<FormErrors>({})
   const [loading, setLoading] = useState(false)
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const setAuth = useAuthStore((state) => state.setAuth)
   const navigate = useNavigate()
 
-  // Clear a field's error as soon as the user starts correcting it
+  // Clear field-level and server-level errors as the user types
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
     if (errors[name as keyof FormData]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }))
     }
+    if (serverError) setServerError(null)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -59,8 +62,16 @@ export default function LoginPage() {
 
       // Step 4: redirect to the correct landing page based on role
       navigate(user.role === 'MANAGER' ? '/dashboard' : '/reports', { replace: true })
-    } catch {
-      // Server error handling added in 10.4
+    } catch (err: unknown) {
+      // 401 = wrong credentials — use the same message for both wrong email and wrong password
+      // to prevent user enumeration (matches the backend's intentional behaviour)
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        setServerError('Invalid email or password.')
+      } else if (axios.isAxiosError(err) && !err.response) {
+        setServerError('Unable to reach the server. Check your connection.')
+      } else {
+        setServerError('Something went wrong. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -98,6 +109,13 @@ export default function LoginPage() {
             onChange={handleChange}
             error={errors.password}
           />
+
+          {/* Server-side error banner — shown after a failed login attempt */}
+          {serverError && (
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {serverError}
+            </div>
+          )}
 
           <Button type="submit" fullWidth loading={loading} className="mt-2">
             Sign in

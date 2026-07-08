@@ -77,6 +77,36 @@ export class DashboardService {
     }));
   }
 
+  // Returns total hours worked per user (sum across all SUBMITTED reports).
+  // All users are included — those with no submissions get totalHours: 0.
+  // Drives the workload bar chart on the manager dashboard.
+  async getWorkload() {
+    const rows = await this.usersRepo
+      .createQueryBuilder('user')
+      // LEFT JOIN so users with no submitted reports still appear with 0 hours
+      .leftJoin(
+        'user.reports',
+        'report',
+        'report.status = :status',
+        { status: ReportStatus.SUBMITTED },
+      )
+      .select('user.id', 'userId')
+      .addSelect('user.name', 'name')
+      .addSelect('user.email', 'email')
+      // COALESCE handles NULL from SUM when a user has no matching reports
+      .addSelect('COALESCE(SUM(report.hoursWorked), 0)', 'totalHours')
+      .groupBy('user.id')
+      // Most hours first; alphabetical name as tiebreaker
+      .orderBy('COALESCE(SUM(report.hoursWorked), 0)', 'DESC')
+      .addOrderBy('user.name', 'ASC')
+      .getRawMany<{ userId: string; name: string; email: string; totalHours: string }>();
+
+    return rows.map((r) => ({
+      user: { id: r.userId, name: r.name, email: r.email },
+      totalHours: Number(r.totalHours),
+    }));
+  }
+
   // Returns the last N weeks with submitted-report counts — drives the trend line chart.
   // Weeks with zero submissions are included so the chart has a continuous x-axis.
   async getWeeklyTrends(weeks = 8) {

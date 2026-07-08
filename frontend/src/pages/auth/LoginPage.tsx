@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import InputField from '@/components/ui/InputField'
 import Button from '@/components/ui/Button'
+import { login, getMe } from '@/api/auth'
+import { useAuthStore } from '@/stores/auth'
 
 type FormData = { email: string; password: string }
 type FormErrors = Partial<Record<keyof FormData, string>>
@@ -21,6 +23,10 @@ function validate(data: FormData): FormErrors {
 export default function LoginPage() {
   const [form, setForm] = useState<FormData>({ email: '', password: '' })
   const [errors, setErrors] = useState<FormErrors>({})
+  const [loading, setLoading] = useState(false)
+
+  const setAuth = useAuthStore((state) => state.setAuth)
+  const navigate = useNavigate()
 
   // Clear a field's error as soon as the user starts correcting it
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -31,14 +37,33 @@ export default function LoginPage() {
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const validationErrors = validate(form)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
       return
     }
-    // API call wired in 10.3
+
+    setLoading(true)
+    try {
+      // Step 1: exchange credentials for a JWT
+      const { data: loginData } = await login({ email: form.email, password: form.password })
+
+      // Step 2: fetch the user profile using the new token directly in the header.
+      // The Zustand store is still empty at this point so the interceptor can't attach it.
+      const { data: user } = await getMe(loginData.access_token)
+
+      // Step 3: persist token + user to Zustand (and localStorage via persist middleware)
+      setAuth(loginData.access_token, user)
+
+      // Step 4: redirect to the correct landing page based on role
+      navigate(user.role === 'MANAGER' ? '/dashboard' : '/reports', { replace: true })
+    } catch {
+      // Server error handling added in 10.4
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -74,7 +99,7 @@ export default function LoginPage() {
             error={errors.password}
           />
 
-          <Button type="submit" fullWidth className="mt-2">
+          <Button type="submit" fullWidth loading={loading} className="mt-2">
             Sign in
           </Button>
         </form>

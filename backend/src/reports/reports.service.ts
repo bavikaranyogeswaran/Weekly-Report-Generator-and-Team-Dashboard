@@ -121,6 +121,32 @@ export class ReportsService {
     return this.stripUserPassword(saved);
   }
 
+  // Submits a DRAFT report — sets status to SUBMITTED and records the timestamp
+  async submit(id: string, userId: string) {
+    const report = await this.findOne(id, userId, Role.MEMBER); // ownership check built-in
+
+    if (report.status !== ReportStatus.DRAFT) {
+      throw new BadRequestException('Only DRAFT reports can be submitted');
+    }
+
+    report.status = ReportStatus.SUBMITTED;
+    report.submittedAt = new Date();
+    const saved = await this.reportsRepo.save(report);
+    return this.stripUserPassword(saved);
+  }
+
+  // Deletes a report — only the owner can delete, and only while it is still a DRAFT
+  async remove(id: string, userId: string) {
+    const report = await this.findOne(id, userId, Role.MEMBER); // ownership check built-in
+
+    if (report.status !== ReportStatus.DRAFT) {
+      throw new BadRequestException('Only DRAFT reports can be deleted');
+    }
+
+    await this.reportsRepo.remove(report);
+    return { message: 'Report deleted successfully' };
+  }
+
   // Removes passwordHash from the nested user object on a report
   private stripUserPassword(report: Report): Report {
     if (report.user) {

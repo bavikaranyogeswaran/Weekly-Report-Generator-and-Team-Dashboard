@@ -14,8 +14,10 @@ export const envValidationSchema = Joi.object({
   JWT_SECRET: Joi.string().min(16).required(),
   JWT_EXPIRES_IN: Joi.string().default('7d'), // e.g. 7d, 24h, 3600s
 
-  // AI
-  GEMINI_API_KEY: Joi.string().required(),
+  // AI — key is required; get a free key at https://console.groq.com
+  GROQ_API_KEY: Joi.string().required(),
+  // Model to use — llama-3.3-70b-versatile is the most capable free option
+  GROQ_MODEL: Joi.string().default('llama-3.3-70b-versatile'),
 
   // App
   PORT: Joi.number().default(3000),

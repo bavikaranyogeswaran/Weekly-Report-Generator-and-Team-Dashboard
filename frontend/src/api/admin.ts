@@ -8,3 +8,11 @@ export const getAdminUsers = () =>
 // PATCH /admin/users/:id/role — assigns MEMBER or MANAGER; ADMIN cannot be assigned
 export const patchUserRole = (userId: string, role: 'MEMBER' | 'MANAGER') =>
   api.patch<AuthUser>(`/admin/users/${userId}/role`, { role })
+
+// POST /admin/users — admin creates a new user with a chosen role; sends welcome email
+export const createAdminUser = (dto: {
+  name: string
+  email: string
+  password: string
+  role: 'MEMBER' | 'MANAGER'
+}) => api.post<AuthUser>('/admin/users', dto)

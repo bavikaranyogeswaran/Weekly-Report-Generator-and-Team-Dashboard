@@ -4,10 +4,12 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AssignRoleDto } from './dto/assign-role.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -23,6 +25,12 @@ export class AdminController {
   @Get()
   findAll() {
     return this.adminService.findAllUsers();
+  }
+
+  // POST /api/admin/users — creates a new user with a chosen role; sends welcome email
+  @Post()
+  createUser(@Body() dto: CreateUserDto) {
+    return this.adminService.createUser(dto);
   }
 
   // PATCH /api/admin/users/:id/role — assigns MEMBER or MANAGER; ADMIN cannot be assigned

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import InputField from '@/components/ui/InputField'
 import Button from '@/components/ui/Button'
@@ -122,12 +122,7 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Don't have an account?{' '}
-          <Link to="/register" className="font-medium text-indigo-600 hover:underline">
-            Register
-          </Link>
-        </p>
+        {/* Accounts are created by the admin — no self-registration link */}
 
       </div>
     </div>

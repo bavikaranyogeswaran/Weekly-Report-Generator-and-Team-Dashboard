@@ -7,7 +7,6 @@ import Layout from '@/components/layout/Layout'
 
 // Auth pages
 import LoginPage from '@/pages/auth/LoginPage'
-import RegisterPage from '@/pages/auth/RegisterPage'
 import VerifyEmailPage from '@/pages/auth/VerifyEmailPage'
 
 // Member pages
@@ -39,7 +38,6 @@ export default function App() {
 
         {/* ── Public routes ─────────────────────────────── */}
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify" element={<VerifyEmailPage />} />
 
         {/* ── Protected routes (token required) ─────────── */}

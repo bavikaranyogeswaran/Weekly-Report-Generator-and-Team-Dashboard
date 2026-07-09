@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getAdminUsers, patchUserRole } from '@/api/admin'
+import { getAdminUsers, patchUserRole, createAdminUser } from '@/api/admin'
 import type { AuthUser, Role } from '@/lib/types'
 
 // Role badge colour map
@@ -30,6 +30,124 @@ function formatDate(iso: string): string {
   return new Date(y, m - 1, d).toLocaleDateString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric',
   })
+}
+
+// ── Create user form ──────────────────────────────────────────────────────────
+
+type CreateForm = { name: string; email: string; password: string; role: 'MEMBER' | 'MANAGER' }
+const EMPTY_CREATE: CreateForm = { name: '', email: '', password: '', role: 'MEMBER' }
+
+function CreateUserForm({ onDone }: { onDone: () => void }) {
+  const queryClient = useQueryClient()
+  const [form, setForm]   = useState<CreateForm>(EMPTY_CREATE)
+  const [error, setError] = useState<string | null>(null)
+
+  const mutation = useMutation({
+    mutationFn: () => createAdminUser(form).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      onDone()
+    },
+    onError: (err: any) => {
+      setError(err?.response?.data?.message ?? 'Failed to create user.')
+    },
+  })
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.name.trim())  { setError('Name is required.');              return }
+    if (!form.email.trim()) { setError('Email is required.');             return }
+    if (form.password.length < 8) { setError('Password must be at least 8 characters.'); return }
+    setError(null)
+    mutation.mutate()
+  }
+
+  function field(key: keyof CreateForm, value: string) {
+    setForm((f) => ({ ...f, [key]: value }))
+    setError(null)
+  }
+
+  const inputCls = 'w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200'
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="mb-5 rounded-xl border border-indigo-200 bg-indigo-50/40 p-4"
+    >
+      <p className="mb-3 text-sm font-semibold text-gray-700">New user</p>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500">Full name</label>
+          <input
+            autoFocus
+            placeholder="Jane Smith"
+            value={form.name}
+            onChange={(e) => field('name', e.target.value)}
+            className={inputCls}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500">Email</label>
+          <input
+            type="email"
+            placeholder="jane@example.com"
+            value={form.email}
+            onChange={(e) => field('email', e.target.value)}
+            className={inputCls}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500">Initial password</label>
+          <input
+            type="password"
+            placeholder="Min. 8 characters"
+            value={form.password}
+            onChange={(e) => field('password', e.target.value)}
+            className={inputCls}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500">Role</label>
+          <select
+            value={form.role}
+            onChange={(e) => field('role', e.target.value)}
+            className={inputCls}
+          >
+            <option value="MEMBER">Member</option>
+            <option value="MANAGER">Manager</option>
+          </select>
+        </div>
+      </div>
+
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+
+      <div className="mt-3 flex gap-2">
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:opacity-60"
+        >
+          {mutation.isPending ? 'Creating…' : 'Create user'}
+        </button>
+        <button
+          type="button"
+          onClick={onDone}
+          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 transition hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+      </div>
+
+      {/* Note that credentials will be emailed */}
+      <p className="mt-2 text-xs text-gray-400">
+        Login credentials will be sent to the user's email address.
+      </p>
+    </form>
+  )
 }
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────
@@ -130,7 +248,7 @@ function UserRow({
               <option value="MEMBER">Member</option>
               <option value="MANAGER">Manager</option>
             </select>
-            {/* Spinner while this row's mutation is in flight */}
+            {/* Spinner shown only while this row's mutation is in flight */}
             {isUpdating && (
               <svg className="h-4 w-4 animate-spin text-indigo-500" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -150,16 +268,16 @@ function UserRow({
 export default function UserManagementPage() {
   const queryClient = useQueryClient()
 
-  // Track which row is mid-mutation so only that row shows a spinner
-  const [pendingId, setPendingId] = useState<string | null>(null)
-  const [errorMsg, setErrorMsg]   = useState<string | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
+  const [pendingId, setPendingId]   = useState<string | null>(null)
+  const [errorMsg, setErrorMsg]     = useState<string | null>(null)
 
   const { data: users, isLoading, isError } = useQuery({
     queryKey: ['admin-users'],
     queryFn: () => getAdminUsers().then((r) => r.data),
   })
 
-  const mutation = useMutation({
+  const roleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: 'MEMBER' | 'MANAGER' }) =>
       patchUserRole(userId, role).then((r) => r.data),
     onMutate: ({ userId }) => {
@@ -167,7 +285,6 @@ export default function UserManagementPage() {
       setErrorMsg(null)
     },
     onSuccess: () => {
-      // Refetch so the badge and select both reflect the new role
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
     },
     onError: () => {
@@ -182,22 +299,36 @@ export default function UserManagementPage() {
     <div>
 
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">User management</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Assign roles to team members. The admin account cannot be modified.
+            Create accounts and assign roles. The admin account cannot be modified.
           </p>
         </div>
-        {/* Live count badge */}
-        {!isLoading && users && (
-          <span className="mt-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-500">
-            {users.length} user{users.length !== 1 ? 's' : ''}
-          </span>
-        )}
+        <div className="flex items-center gap-3 pt-1">
+          {!isLoading && users && (
+            <span className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-500">
+              {users.length} user{users.length !== 1 ? 's' : ''}
+            </span>
+          )}
+          {!showCreate && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-700"
+            >
+              + Create user
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Error banner for mutation failures */}
+      {/* Inline create form */}
+      {showCreate && (
+        <CreateUserForm onDone={() => setShowCreate(false)} />
+      )}
+
+      {/* Error banner for role-change failures */}
       {errorMsg && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {errorMsg}
@@ -235,7 +366,7 @@ export default function UserManagementPage() {
                 <UserRow
                   key={user.id}
                   user={user}
-                  onRoleChange={(userId, role) => mutation.mutate({ userId, role })}
+                  onRoleChange={(userId, role) => roleMutation.mutate({ userId, role })}
                   isUpdating={pendingId === user.id}
                 />
               ))}

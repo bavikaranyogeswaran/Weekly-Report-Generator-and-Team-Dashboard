@@ -54,6 +54,31 @@ export class EmailService {
     });
   }
 
+  // Sends login credentials to a user whose account was created by the admin.
+  // If SMTP is not configured, prints the credentials to the console instead.
+  async sendWelcomeEmail(
+    to: string,
+    name: string,
+    role: Role,
+    temporaryPassword: string,
+  ): Promise<void> {
+    if (!this.transporter) {
+      console.log(
+        `\n[Email] No SMTP configured. Welcome credentials for ${to}:\n  Password: ${temporaryPassword}\n`,
+      );
+      return;
+    }
+
+    const from = this.config.get<string>('SMTP_FROM') ?? 'noreply@weeklyreports.dev';
+
+    await this.transporter.sendMail({
+      from: `"Weekly Reports" <${from}>`,
+      to,
+      subject: 'Your Weekly Reports account is ready',
+      html: this.buildWelcomeHtml(name, to, role, temporaryPassword),
+    });
+  }
+
   // Notifies a user that a manager has changed their role.
   // If SMTP is not configured, prints a message to the console instead.
   async sendRoleAssignedEmail(to: string, name: string, newRole: Role): Promise<void> {
@@ -96,6 +121,44 @@ export class EmailService {
             <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
             <p style="color: #999; font-size: 12px; margin: 0;">
               If you did not create an account, you can safely ignore this email.
+            </p>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  // HTML template for the admin-created welcome email
+  private buildWelcomeHtml(
+    name: string,
+    email: string,
+    role: Role,
+    temporaryPassword: string,
+  ): string {
+    const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:5173';
+    const roleLabel = role === Role.MANAGER ? 'Manager' : 'Member';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; margin: 0;">
+          <div style="max-width: 520px; margin: 0 auto; background: white; border-radius: 10px; padding: 32px;">
+            <h2 style="color: #4f46e5; margin-top: 0;">Weekly Report Generator</h2>
+            <p>Hi <strong>${name}</strong>,</p>
+            <p>Your account has been created by an administrator. You have been assigned the role of <strong>${roleLabel}</strong>.</p>
+            <div style="background: #f8f7ff; border: 1px solid #e0e7ff; border-radius: 8px; padding: 16px; margin: 20px 0;">
+              <p style="margin: 0 0 8px; font-size: 13px; color: #555;">Your login credentials:</p>
+              <p style="margin: 4px 0; font-size: 14px;"><strong>Email:</strong> ${email}</p>
+              <p style="margin: 4px 0; font-size: 14px;"><strong>Password:</strong> ${temporaryPassword}</p>
+            </div>
+            <a href="${appUrl}/login"
+               style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px;
+                      border-radius: 6px; text-decoration: none; font-weight: bold; margin: 8px 0;">
+              Sign in
+            </a>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+            <p style="color: #999; font-size: 12px; margin: 0;">
+              Please keep your credentials safe. Contact your administrator if you need a password reset.
             </p>
           </div>
         </body>

@@ -1,14 +1,17 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { User } from '../users/entities/user.entity';
 import { Role } from '../common/enums/role.enum';
 import { EmailService } from '../email/email.service';
 import { AssignRoleDto } from './dto/assign-role.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class AdminService {
@@ -19,6 +22,33 @@ export class AdminService {
     // Send a notification email when a user's role changes
     private readonly emailService: EmailService,
   ) {}
+
+  // Creates a new user with a chosen role. Admin-created accounts are marked
+  // isVerified immediately — no email verification step is required.
+  async createUser(dto: CreateUserDto) {
+    const existing = await this.usersRepo.findOne({ where: { email: dto.email } });
+    if (existing) {
+      throw new ConflictException('A user with this email already exists');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+
+    const user = this.usersRepo.create({
+      name: dto.name,
+      email: dto.email,
+      passwordHash,
+      role: dto.role as Role,
+      isVerified: true, // admin-created accounts skip email verification
+    });
+
+    const saved = await this.usersRepo.save(user);
+
+    // Email the new user their login credentials
+    await this.emailService.sendWelcomeEmail(saved.email, saved.name, saved.role, dto.password);
+
+    const { passwordHash: _pw, ...safe } = saved;
+    return safe;
+  }
 
   // Returns every user, newest first, with passwordHash stripped
   async findAllUsers() {

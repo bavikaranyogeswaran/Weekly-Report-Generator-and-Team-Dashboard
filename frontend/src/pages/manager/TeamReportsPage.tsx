@@ -50,11 +50,65 @@ function ReportsSkeleton() {
   )
 }
 
+// Splits a multi-line text field into non-empty trimmed lines for bullet rendering
+function toLines(text: string | null | undefined): string[] {
+  return (text ?? '').split('\n').map((l) => l.trim()).filter(Boolean)
+}
+
+// ── Expandable detail field — renders as bullets for multi-line, plain text for single ──
+function DetailField({
+  label,
+  text,
+  warn,
+}: {
+  label: string
+  text: string | null | undefined
+  warn?: boolean  // rose tint when true (used for blockers with content)
+}) {
+  const lines = toLines(text)
+
+  return (
+    <div>
+      <p
+        className={`mb-1.5 text-xs font-semibold uppercase tracking-wide ${
+          warn ? 'text-rose-500' : 'text-gray-400'
+        }`}
+      >
+        {label}
+      </p>
+
+      {lines.length === 0 ? (
+        <p className="text-sm text-gray-300">—</p>
+      ) : lines.length === 1 ? (
+        <p className={`text-sm ${warn ? 'text-rose-700' : 'text-gray-700'}`}>{lines[0]}</p>
+      ) : (
+        <ul className="space-y-1">
+          {lines.map((line, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm">
+              <span
+                className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${
+                  warn ? 'bg-rose-400' : 'bg-gray-300'
+                }`}
+              />
+              <span className={warn ? 'text-rose-700' : 'text-gray-700'}>{line}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 // ── Single report card (read-only — managers cannot edit members' reports) ────
 function ReportCard({ report }: { report: Report }) {
+  const [expanded, setExpanded] = useState(false)
+  const hasBlockers = (report.blockers ?? '').trim().length > 0
+
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+
+      {/* ── Summary header ── */}
+      <div className="flex items-start gap-4 p-4">
 
         <div className="min-w-0 flex-1">
           {/* Member name + email */}
@@ -88,14 +142,53 @@ function ReportCard({ report }: { report: Report }) {
           )}
         </div>
 
-        {/* Status badge */}
-        <span
-          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_BADGE[report.status] ?? 'bg-gray-100 text-gray-600'}`}
-        >
-          {report.status}
-        </span>
+        {/* Right column: status badge + expand toggle */}
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_BADGE[report.status] ?? 'bg-gray-100 text-gray-600'}`}
+          >
+            {report.status}
+          </span>
+
+          {/* Blockers indicator dot — quick visual signal without expanding */}
+          {hasBlockers && (
+            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-600">
+              blockers
+            </span>
+          )}
+        </div>
 
       </div>
+
+      {/* ── Expand / collapse toggle ── */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center justify-between border-t border-gray-100 px-4 py-2 text-xs text-gray-400 transition hover:bg-gray-50/60"
+        aria-expanded={expanded}
+      >
+        <span>{expanded ? 'Hide details' : 'View details'}</span>
+        {/* Chevron rotates when expanded */}
+        <svg
+          className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* ── Detail panel ── */}
+      {expanded && (
+        <div className="grid grid-cols-1 gap-5 border-t border-gray-100 px-4 pb-5 pt-4 sm:grid-cols-2">
+          <DetailField label="Tasks completed" text={report.tasksCompleted} />
+          <DetailField label="Tasks planned"   text={report.tasksPlanned} />
+          <DetailField label="Blockers" text={report.blockers} warn={hasBlockers} />
+          <DetailField label="Notes"    text={report.notes} />
+        </div>
+      )}
+
     </div>
   )
 }

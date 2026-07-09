@@ -47,13 +47,12 @@ export default function SettingsPage() {
     },
     onError: (err: unknown) => {
       if (axios.isAxiosError(err) && err.response?.status === 400) {
-        const msg: string = err.response.data?.message ?? 'Request failed.'
-        // Surface field-level error for wrong current password
-        if (msg.toLowerCase().includes('current password')) {
-          setErrors((prev) => ({ ...prev, currentPassword: msg }))
-        } else {
-          setServerError(msg)
-        }
+        // NestJS may return message as string[] for validation errors — normalise to string.
+        // Any 400 from PATCH /auth/password after client-side validation is a wrong current
+        // password, so always route it to the currentPassword field rather than the banner.
+        const raw = err.response.data?.message
+        const msg: string = (Array.isArray(raw) ? raw[0] : raw) ?? 'Current password is incorrect.'
+        setErrors((prev) => ({ ...prev, currentPassword: msg }))
       } else if (axios.isAxiosError(err) && !err.response) {
         setServerError('Unable to reach the server. Check your connection.')
       } else {

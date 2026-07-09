@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -43,8 +44,16 @@ export class AdminService {
 
     const saved = await this.usersRepo.save(user);
 
-    // Email the new user their login credentials
-    await this.emailService.sendWelcomeEmail(saved.email, saved.name, saved.role, dto.password);
+    // Send credentials email after saving — if it fails, remove the user so the admin
+    // can retry without hitting a ConflictException on the same email address.
+    try {
+      await this.emailService.sendWelcomeEmail(saved.email, saved.name, saved.role, dto.password);
+    } catch {
+      await this.usersRepo.remove(saved);
+      throw new InternalServerErrorException(
+        'Welcome email failed to send. The account was not created. Please try again.',
+      );
+    }
 
     const { passwordHash: _pw, ...safe } = saved;
     return safe;

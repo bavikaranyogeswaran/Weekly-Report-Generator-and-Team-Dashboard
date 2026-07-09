@@ -80,10 +80,10 @@ export default function VerifyEmailPage() {
             <h2 className="text-xl font-bold text-gray-800">Verification failed</h2>
             <p className="mt-2 text-sm text-gray-500">{errorMessage}</p>
             <Link
-              to="/register"
+              to="/login"
               className="mt-6 inline-block text-sm font-medium text-indigo-600 hover:underline"
             >
-              Back to register
+              Back to sign in
             </Link>
           </>
         )}

@@ -32,12 +32,14 @@ export default function ResetPasswordPage() {
   const [loading, setLoading]   = useState(false)
   const [success, setSuccess]   = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+  // True when the error is a bad/expired token — shows "Request a new link" prompt
+  const [isTokenError, setIsTokenError] = useState(false)
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
     if (errors[name as keyof FormData]) setErrors((prev) => ({ ...prev, [name]: undefined }))
-    if (serverError) setServerError(null)
+    if (serverError) { setServerError(null); setIsTokenError(false) }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -51,9 +53,12 @@ export default function ResetPasswordPage() {
       setSuccess(true)
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 400) {
-        setServerError(
-          err.response.data?.message ?? 'Reset link is invalid or has expired.',
-        )
+        // NestJS can return message as string[] for validation errors — normalise to string
+        const raw = err.response.data?.message
+        const msg = Array.isArray(raw) ? raw[0] : raw
+        setServerError(msg ?? 'Reset link is invalid or has expired.')
+        // Any 400 from this endpoint means the token is unusable — offer a new link
+        setIsTokenError(true)
       } else if (axios.isAxiosError(err) && !err.response) {
         setServerError('Unable to reach the server. Check your connection.')
       } else {
@@ -150,11 +155,11 @@ export default function ResetPasswordPage() {
           {serverError && (
             <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
               {serverError}{' '}
-              {serverError.includes('invalid') || serverError.includes('expired') ? (
+              {isTokenError && (
                 <Link to="/forgot-password" className="underline font-medium">
                   Request a new link
                 </Link>
-              ) : null}
+              )}
             </div>
           )}
 

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getActivityFeed } from '@/api/dashboard'
+import ProjectBadge from '@/components/ProjectBadge'
 import type { ActivityItem } from '@/lib/types'
 
 // Format "2026-07-07" → "7 Jul" without UTC shift
@@ -69,11 +70,15 @@ function FeedRow({ item }: { item: ActivityItem }) {
           </span>
         </div>
 
-        {/* Week range */}
+        {/* Week range + project badge (dot colour comes from projects.color) */}
         <p className="mt-0.5 text-xs text-gray-500">
           {fmtDate(item.weekStart)} – {fmtDate(item.weekEnd)}
           {item.project && (
-            <span className="ml-2 text-gray-400">· {item.project.name}</span>
+            <ProjectBadge
+              name={item.project.name}
+              color={item.project.color}
+              className="ml-2 text-gray-400"
+            />
           )}
         </p>
       </div>

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getReports, submitReport, deleteReport } from '@/api/reports'
+import ProjectBadge from '@/components/ProjectBadge'
 import type { Report } from '@/lib/types'
 
 // Format "2026-07-06" → "06 Jul 2026" without UTC shift
@@ -59,7 +60,11 @@ function ReportCard({ report, isSubmitting, isDeleting, onSubmit, onDelete }: Re
             {formatDate(report.weekStart)} – {formatDate(report.weekEnd)}
           </p>
           <p className="mt-0.5 text-sm text-gray-500">
-            {report.project?.name ?? 'No project'}
+            {report.project ? (
+              <ProjectBadge name={report.project.name} color={report.project.color} />
+            ) : (
+              'No project'
+            )}
           </p>
           {report.submittedAt && (
             <p className="mt-1 text-xs text-gray-400">

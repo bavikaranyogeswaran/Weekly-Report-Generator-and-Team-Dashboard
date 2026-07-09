@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getReports } from '@/api/reports'
+import ProjectBadge from '@/components/ProjectBadge'
 import type { Report, ReportStatus } from '@/lib/types'
 
 // Format "2026-07-07" → "07 Jul 2026" without UTC shift
@@ -64,7 +65,11 @@ function ReportCard({ report }: { report: Report }) {
 
           {/* Project + hours */}
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-400">
-            <span>{report.project?.name ?? 'No project'}</span>
+            {report.project ? (
+              <ProjectBadge name={report.project.name} color={report.project.color} />
+            ) : (
+              <span>No project</span>
+            )}
             {report.hoursWorked != null && (
               <span>{report.hoursWorked} h logged</span>
             )}

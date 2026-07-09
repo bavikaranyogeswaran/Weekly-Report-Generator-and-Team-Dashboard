@@ -33,7 +33,7 @@ export type Report = {
   userId: string
   projectId: string | null
   user?: { id: string; name: string; email: string }
-  project?: { id: string; name: string } | null
+  project?: { id: string; name: string; color: string } | null
 }
 
 // Data sent when creating a new report (POST /reports)
@@ -56,6 +56,7 @@ export type Project = {
   id: string
   name: string
   description: string | null
+  color: string            // hex accent colour shown as a dot next to the name
   createdAt: string
 }
 
@@ -94,5 +95,5 @@ export type WorkloadItem = {
 // GET /dashboard/activity-feed — latest N submitted reports with user + project
 export type ActivityItem = Report & {
   user: { id: string; name: string; email: string }
-  project: { id: string; name: string } | null
+  project: { id: string; name: string; color: string } | null
 }

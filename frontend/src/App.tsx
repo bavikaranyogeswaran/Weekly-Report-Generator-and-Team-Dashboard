@@ -19,6 +19,7 @@ import EditReportPage from '@/pages/member/EditReportPage'
 import DashboardPage from '@/pages/manager/DashboardPage'
 import TeamReportsPage from '@/pages/manager/TeamReportsPage'
 import AiChatPage from '@/pages/manager/AiChatPage'
+import ProjectsPage from '@/pages/manager/ProjectsPage'
 
 // Admin pages
 import UserManagementPage from '@/pages/admin/UserManagementPage'
@@ -57,6 +58,7 @@ export default function App() {
             <Route element={<ManagerRoute />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/team-reports" element={<TeamReportsPage />} />
+              <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/ai-chat" element={<AiChatPage />} />
             </Route>
 

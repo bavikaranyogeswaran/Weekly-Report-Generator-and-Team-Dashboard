@@ -3,11 +3,12 @@ import type { InputHTMLAttributes } from 'react'
 interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
   error?: string
+  hint?: string  // shown in parentheses after the label, e.g. "optional"
 }
 
 // Labeled input with optional error message below.
 // Accepts all standard <input> props (type, placeholder, value, onChange, etc.)
-export default function InputField({ label, error, id, className, ...props }: InputFieldProps) {
+export default function InputField({ label, error, hint, id, className, ...props }: InputFieldProps) {
   // Derive a stable id from the label if none is provided
   const inputId = id ?? label.toLowerCase().replace(/\s+/g, '-')
 
@@ -15,6 +16,7 @@ export default function InputField({ label, error, id, className, ...props }: In
     <div className="flex flex-col gap-1">
       <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
         {label}
+        {hint && <span className="ml-1 font-normal text-gray-400">({hint})</span>}
       </label>
 
       <input

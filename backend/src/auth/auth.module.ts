@@ -9,6 +9,7 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { AdminGuard } from './guards/admin.guard';
 import { EmailModule } from '../email/email.module';
 
 @Module({
@@ -38,9 +39,9 @@ import { EmailModule } from '../email/email.module';
   ],
   controllers: [AuthController],
   // JwtStrategy must be a provider so Passport can discover and use it
-  providers: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard, AdminGuard],
 
-  // Export both guards so any module that imports AuthModule can use them directly
-  exports: [JwtAuthGuard, RolesGuard],
+  // Export all guards so any module that imports AuthModule can use them directly
+  exports: [JwtAuthGuard, RolesGuard, AdminGuard],
 })
 export class AuthModule {}

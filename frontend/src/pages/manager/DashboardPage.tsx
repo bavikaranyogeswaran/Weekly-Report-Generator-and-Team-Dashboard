@@ -6,12 +6,31 @@ import WeeklyTrendsChart from '@/components/charts/WeeklyTrendsChart'
 import WorkloadChart from '@/components/charts/WorkloadChart'
 import ActivityFeed from '@/components/ActivityFeed'
 
-// ── Summary stats row ─────────────────────────────────────────────────────────
+// ── Shared card wrapper ────────────────────────────────────────────────────────
+// Keeps all chart containers visually consistent without repeating the same HTML
+interface ChartCardProps {
+  title: string
+  subtitle: string
+  children: React.ReactNode
+  className?: string
+}
+function ChartCard({ title, subtitle, children, className = '' }: ChartCardProps) {
+  return (
+    <div className={`rounded-xl border border-gray-200 bg-white p-5 shadow-sm ${className}`}>
+      <h2 className="text-sm font-semibold text-gray-700">{title}</h2>
+      <p className="mb-3 mt-0.5 text-xs text-gray-400">{subtitle}</p>
+      {children}
+    </div>
+  )
+}
 
+// ── Summary stats row ─────────────────────────────────────────────────────────
 function SummaryRow() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['dashboard', 'summary'],
     queryFn: () => getDashboardSummary().then((r) => r.data),
+    // Keep stats fresh without requiring a manual page reload
+    refetchInterval: 60_000,
   })
 
   if (isLoading) {
@@ -52,53 +71,64 @@ function SummaryRow() {
         label="Submission rate"
         value={`${data.submissionRate}%`}
         sublabel="this week"
-        accent={data.submissionRate >= 80 ? 'green' : data.submissionRate >= 50 ? 'amber' : 'rose'}
+        // Accent shifts with health: green ≥80%, amber ≥50%, rose below
+        accent={
+          data.submissionRate >= 80 ? 'green'
+          : data.submissionRate >= 50 ? 'amber'
+          : 'rose'
+        }
       />
     </div>
   )
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-
 export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">Team overview for this week</p>
+
+      {/* Page header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-500">Team overview for this week</p>
+        </div>
+        {/* Live badge — lets the manager know data is not stale */}
+        <span className="mt-1 flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+          <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+          Live
+        </span>
       </div>
 
+      {/* Row 1 — four headline KPIs */}
       <SummaryRow />
 
-      {/* Charts — top row: donut + area chart */}
+      {/* Row 2 — submission donut (1 col) + weekly trend area chart (2 cols) */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-1 text-sm font-semibold text-gray-700">Submission status</h2>
-          <p className="mb-3 text-xs text-gray-400">Current week</p>
+        <ChartCard title="Submission status" subtitle="Current week">
           <SubmissionStatusChart />
-        </div>
+        </ChartCard>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2">
-          <h2 className="mb-1 text-sm font-semibold text-gray-700">Weekly submissions</h2>
-          <p className="mb-3 text-xs text-gray-400">Last 8 weeks</p>
+        <ChartCard
+          title="Weekly submissions"
+          subtitle="Submitted reports over the last 8 weeks"
+          className="lg:col-span-2"
+        >
           <WeeklyTrendsChart />
-        </div>
+        </ChartCard>
       </div>
 
-      {/* Charts — second row: workload bar + activity feed */}
+      {/* Row 3 — workload bar chart (1 col) + activity feed (1 col) */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-1 text-sm font-semibold text-gray-700">Team workload</h2>
-          <p className="mb-3 text-xs text-gray-400">Total hours logged (all time)</p>
+        <ChartCard title="Team workload" subtitle="Total hours logged across all submitted reports">
           <WorkloadChart />
-        </div>
+        </ChartCard>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-1 text-sm font-semibold text-gray-700">Recent activity</h2>
-          <p className="mb-3 text-xs text-gray-400">Latest submitted reports</p>
+        <ChartCard title="Recent activity" subtitle="Latest submitted reports">
           <ActivityFeed />
-        </div>
+        </ChartCard>
       </div>
+
     </div>
   )
 }

@@ -135,7 +135,8 @@ export class EmailService {
     role: Role,
     temporaryPassword: string,
   ): string {
-    const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:5173';
+    // FRONTEND_URL points at the React app — the sign-in link should go there, not the API
+    const appUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
     const roleLabel = role === Role.MANAGER ? 'Manager' : 'Member';
 
     return `

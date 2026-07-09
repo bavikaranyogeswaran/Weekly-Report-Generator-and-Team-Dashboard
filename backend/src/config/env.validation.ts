@@ -32,8 +32,11 @@ export const envValidationSchema = Joi.object({
   SMTP_PASS: Joi.string().optional(),
   SMTP_FROM: Joi.string().optional(), // e.g. noreply@yourdomain.com
 
-  // Base URL used to build the verification link (e.g. http://localhost:3000 in dev)
+  // Backend base URL — used to build API links in emails (e.g. verification link)
   APP_URL: Joi.string().default('http://localhost:3000'),
+
+  // Frontend base URL — used for CORS origin and frontend links in emails
+  FRONTEND_URL: Joi.string().default('http://localhost:5173'),
 
   // IANA timezone name used for all date calculations (week boundaries, "today", etc.)
   APP_TIMEZONE: Joi.string().default('Asia/Colombo'),

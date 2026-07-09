@@ -117,8 +117,8 @@ export default function DashboardPage() {
         </ChartCard>
 
         <ChartCard
-          title="Weekly submissions"
-          subtitle="Submitted reports over the last 8 weeks"
+          title="Tasks completed"
+          subtitle="Total tasks logged across submitted reports, last 8 weeks"
           className="lg:col-span-2"
         >
           <WeeklyTrendsChart />

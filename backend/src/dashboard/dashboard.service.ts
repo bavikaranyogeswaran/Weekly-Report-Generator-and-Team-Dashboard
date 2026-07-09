@@ -156,18 +156,33 @@ export class DashboardService {
       .createQueryBuilder('report')
       .select("TO_CHAR(report.weekStart, 'YYYY-MM-DD')", 'weekLabel')
       .addSelect('COUNT(*)', 'submitted')
+      // Sum non-empty lines in tasksCompleted across all reports for this week.
+      // regexp_replace collapses consecutive newlines so blank lines don't inflate the count.
+      .addSelect(
+        `COALESCE(SUM(
+          CASE WHEN TRIM(report.tasksCompleted) = '' THEN 0
+          ELSE array_length(
+            string_to_array(
+              regexp_replace(TRIM(report.tasksCompleted), E'\\n+', E'\\n', 'g'),
+              E'\\n'
+            ), 1
+          ) END
+        ), 0)`,
+        'tasksCompleted',
+      )
       .where('report.status = :status', { status: ReportStatus.SUBMITTED })
       .andWhere('report.weekStart >= :startDate', { startDate: weekLabels[0] })
       .groupBy('report.weekStart')
       .orderBy('report.weekStart', 'ASC')
-      .getRawMany<{ weekLabel: string; submitted: string }>();
+      .getRawMany<{ weekLabel: string; submitted: string; tasksCompleted: string }>();
 
-    // Map weekLabel → count for O(1) lookup when filling in zero weeks
-    const countMap = new Map(rows.map((r) => [r.weekLabel, parseInt(r.submitted, 10)]));
+    // Map weekLabel → row for O(1) lookup when filling in zero weeks
+    const rowMap = new Map(rows.map((r) => [r.weekLabel, r]));
 
     return weekLabels.map((weekStart) => ({
       weekStart,
-      submitted: countMap.get(weekStart) ?? 0,
+      submitted:      parseInt(rowMap.get(weekStart)?.submitted      ?? '0', 10),
+      tasksCompleted: parseInt(rowMap.get(weekStart)?.tasksCompleted ?? '0', 10),
     }));
   }
 

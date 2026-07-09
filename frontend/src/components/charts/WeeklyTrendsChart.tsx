@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { getWeeklyTrends } from '@/api/dashboard'
 import type { WeeklyTrendItem } from '@/lib/types'
@@ -33,7 +33,7 @@ function ChartTooltip({
     <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-md">
       <p className="font-medium text-gray-800">Week of {label}</p>
       <p className="mt-0.5 text-gray-500">
-        {count} report{count !== 1 ? 's' : ''} submitted
+        {count} task{count !== 1 ? 's' : ''} completed
       </p>
     </div>
   )
@@ -55,10 +55,18 @@ function ChartDot(props: {
 }
 
 // Selective direct label — shown only on the last (current) data point
-function EndLabel(props: { x?: number; y?: number; value?: number; index?: number; total?: number }) {
-  const { x, y, value, index, total } = props
+// Recharts types x/y as string | number and value as RenderableText,
+// so we accept the wide types and coerce to numbers before drawing
+function EndLabel(props: {
+  x?: number | string; y?: number | string; value?: unknown
+  index?: number; total?: number
+}) {
+  const { index, total } = props
   if (index === undefined || total === undefined || index !== total - 1) return null
-  if (x === undefined || y === undefined || value === undefined) return null
+  if (props.x === undefined || props.y === undefined || props.value === undefined) return null
+  const x = Number(props.x)
+  const y = Number(props.y)
+  const value = Number(props.value)
   return (
     <text
       x={x}
@@ -115,7 +123,7 @@ export default function WeeklyTrendsChart() {
   }))
 
   // Y-axis upper bound: max value + 1, minimum ceiling of 5 so empty weeks aren't flat
-  const maxVal = Math.max(...chartData.map((d) => d.submitted), 0)
+  const maxVal = Math.max(...chartData.map((d) => d.tasksCompleted), 0)
   const yMax = Math.max(maxVal + 1, 5)
 
   return (
@@ -150,7 +158,7 @@ export default function WeeklyTrendsChart() {
 
         <Area
           type="monotone"
-          dataKey="submitted"
+          dataKey="tasksCompleted"
           stroke={SERIES_COLOR}
           strokeWidth={2}            // 2px line per mark spec
           fill={AREA_FILL}           // ~10% opacity wash

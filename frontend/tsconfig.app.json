@@ -23,9 +23,8 @@
     "noFallthroughCasesInSwitch": true,
 
     /* Path aliases — '@/' resolves to 'src/' in both TS and Vite */
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"]

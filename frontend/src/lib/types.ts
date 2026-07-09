@@ -83,8 +83,9 @@ export type SubmissionStatusItem = {
 
 // GET /dashboard/weekly-trends — one entry per week for the last N weeks
 export type WeeklyTrendItem = {
-  weekStart: string   // YYYY-MM-DD
-  submitted: number
+  weekStart: string      // YYYY-MM-DD
+  submitted: number      // number of submitted reports that week
+  tasksCompleted: number // sum of non-empty lines in tasksCompleted across submitted reports
 }
 
 // GET /dashboard/workload — total submitted hours per team member

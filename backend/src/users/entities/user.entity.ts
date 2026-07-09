@@ -27,7 +27,7 @@ export class User {
   @Column({ name: 'password_hash' })
   passwordHash: string;
 
-  // Every user is either a MEMBER or a MANAGER
+  // MEMBER (default on signup), MANAGER (assigned by admin), or ADMIN (seeded from env)
   @Column({ type: 'enum', enum: Role, default: Role.MEMBER })
   role: Role;
 

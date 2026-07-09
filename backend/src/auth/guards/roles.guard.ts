@@ -33,6 +33,9 @@ export class RolesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<{ user: AuthenticatedUser }>();
     const user = request.user;
 
+    // ADMIN is a super-role — always passes every role check
+    if (user?.role === Role.ADMIN) return true;
+
     // Block access if the user's role is not in the allowed list
     return requiredRoles.includes(user?.role);
   }

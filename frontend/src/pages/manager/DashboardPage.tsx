@@ -127,7 +127,7 @@ export default function DashboardPage() {
 
       {/* Row 3 — workload bar chart (1 col) + activity feed (1 col) */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ChartCard title="Team workload" subtitle="Total hours logged across all submitted reports">
+        <ChartCard title="Workload by project" subtitle="Total hours logged per project across all submitted reports">
           <WorkloadChart />
         </ChartCard>
 

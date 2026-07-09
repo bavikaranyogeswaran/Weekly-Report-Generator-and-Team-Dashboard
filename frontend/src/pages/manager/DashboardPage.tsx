@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getDashboardSummary } from '@/api/dashboard'
 import StatCard, { StatCardSkeleton } from '@/components/ui/StatCard'
 import SubmissionStatusChart from '@/components/charts/SubmissionStatusChart'
+import WeeklyTrendsChart from '@/components/charts/WeeklyTrendsChart'
 
 // ── Summary stats row ─────────────────────────────────────────────────────────
 
@@ -73,6 +74,12 @@ export default function DashboardPage() {
           <h2 className="mb-1 text-sm font-semibold text-gray-700">Submission status</h2>
           <p className="mb-3 text-xs text-gray-400">Current week</p>
           <SubmissionStatusChart />
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2">
+          <h2 className="mb-1 text-sm font-semibold text-gray-700">Weekly submissions</h2>
+          <p className="mb-3 text-xs text-gray-400">Last 8 weeks</p>
+          <WeeklyTrendsChart />
         </div>
       </div>
     </div>

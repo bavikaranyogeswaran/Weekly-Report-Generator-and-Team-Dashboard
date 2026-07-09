@@ -154,15 +154,15 @@ export default function SubmissionStatusChart() {
             // 2px surface-colour gap between adjacent slices (from mark spec)
             paddingAngle={2}
             labelLine={false}
-            label={(props) => (
+            label={(props: any) => (
               <SliceLabel
                 cx={props.cx}
                 cy={props.cy}
                 midAngle={props.midAngle}
                 innerRadius={props.innerRadius}
                 outerRadius={props.outerRadius}
-                pct={props.pct ?? 0}
-                count={props.count ?? 0}
+                pct={props.payload?.pct ?? 0}
+                count={props.payload?.count ?? 0}
               />
             )}
           >

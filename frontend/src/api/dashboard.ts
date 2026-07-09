@@ -22,9 +22,9 @@ export const getSubmissionStatus = (weekStart?: string) =>
 export const getWeeklyTrends = (weeks = 8) =>
   api.get<WeeklyTrendItem[]>('/dashboard/weekly-trends', { params: { weeks } })
 
-// GET /dashboard/workload — total hours logged per team member
-export const getWorkload = () =>
-  api.get<WorkloadItem[]>('/dashboard/workload')
+// GET /dashboard/workload?groupBy=project|user — hours grouped by project (default) or user
+export const getWorkload = (groupBy: 'project' | 'user' = 'project') =>
+  api.get<WorkloadItem[]>('/dashboard/workload', { params: { groupBy } })
 
 // GET /dashboard/activity-feed — latest submitted reports with user + project
 export const getActivityFeed = (limit = 10) =>

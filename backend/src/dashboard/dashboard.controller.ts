@@ -35,11 +35,11 @@ export class DashboardController {
     return this.dashboardService.getWeeklyTrends(weeksNum);
   }
 
-  // GET /api/dashboard/workload
-  // Returns total hours worked per user across all submitted reports
+  // GET /api/dashboard/workload?groupBy=project|user
+  // groupBy defaults to 'project'; pass 'user' to switch to per-member view
   @Get('workload')
-  getWorkload() {
-    return this.dashboardService.getWorkload();
+  getWorkload(@Query('groupBy') groupBy?: 'project' | 'user') {
+    return this.dashboardService.getWorkload(groupBy ?? 'project');
   }
 
   // GET /api/dashboard/activity-feed?limit=10

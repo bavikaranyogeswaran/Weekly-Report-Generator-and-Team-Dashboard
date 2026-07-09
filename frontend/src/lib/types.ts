@@ -88,9 +88,10 @@ export type WeeklyTrendItem = {
   tasksCompleted: number // sum of non-empty lines in tasksCompleted across submitted reports
 }
 
-// GET /dashboard/workload — total submitted hours per project
+// GET /dashboard/workload — total submitted hours, grouped by project or user
 export type WorkloadItem = {
-  project: { id: string; name: string; color: string }
+  name: string          // project name or user name depending on groupBy
+  color: string | null  // project hex colour; null when grouping by user
   totalHours: number
 }
 

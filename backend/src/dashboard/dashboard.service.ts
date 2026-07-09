@@ -105,38 +105,57 @@ export class DashboardService {
     });
   }
 
-  // Returns total hours worked per project (sum across all SUBMITTED reports).
-  // Only projects with at least one logged hour are included — projects with no
-  // submitted hours are excluded to keep the chart focused on actual workload.
-  // Drives the workload bar chart on the manager dashboard.
-  async getWorkload() {
+  // Returns total hours worked, grouped by either project or user.
+  // Drives the workload bar chart; callers toggle groupBy at query time.
+  async getWorkload(groupBy: 'project' | 'user' = 'project') {
+    return groupBy === 'user'
+      ? this.workloadByUser()
+      : this.workloadByProject();
+  }
+
+  // Hours per project — each row gets the project's own hex colour for the bar
+  private async workloadByProject() {
     const rows = await this.projectsRepo
       .createQueryBuilder('project')
-      // LEFT JOIN filtered to SUBMITTED reports only
       .leftJoin(
         'project.reports',
         'report',
         'report.status = :status',
         { status: ReportStatus.SUBMITTED },
       )
-      .select('project.id', 'projectId')
-      .addSelect('project.name', 'name')
+      .select('project.name', 'name')
       .addSelect('project.color', 'color')
-      // COALESCE handles NULL from SUM when a project has no matching reports
       .addSelect('COALESCE(SUM(report.hoursWorked), 0)', 'totalHours')
       .groupBy('project.id')
-      // Most hours first; alphabetical name as tiebreaker
       .orderBy('COALESCE(SUM(report.hoursWorked), 0)', 'DESC')
       .addOrderBy('project.name', 'ASC')
-      .getRawMany<{ projectId: string; name: string; color: string; totalHours: string }>();
+      .getRawMany<{ name: string; color: string; totalHours: string }>();
 
     return rows
-      // Drop projects with zero hours so the chart shows only active workload
       .filter((r) => Number(r.totalHours) > 0)
-      .map((r) => ({
-        project: { id: r.projectId, name: r.name, color: r.color },
-        totalHours: Number(r.totalHours),
-      }));
+      .map((r) => ({ name: r.name, color: r.color, totalHours: Number(r.totalHours) }));
+  }
+
+  // Hours per user — color is null (frontend applies a uniform palette for users)
+  private async workloadByUser() {
+    const rows = await this.usersRepo
+      .createQueryBuilder('user')
+      .leftJoin(
+        'user.reports',
+        'report',
+        'report.status = :status',
+        { status: ReportStatus.SUBMITTED },
+      )
+      .select('user.name', 'name')
+      .addSelect('COALESCE(SUM(report.hoursWorked), 0)', 'totalHours')
+      .groupBy('user.id')
+      .orderBy('COALESCE(SUM(report.hoursWorked), 0)', 'DESC')
+      .addOrderBy('user.name', 'ASC')
+      .getRawMany<{ name: string; totalHours: string }>();
+
+    return rows
+      .filter((r) => Number(r.totalHours) > 0)
+      .map((r) => ({ name: r.name, color: null, totalHours: Number(r.totalHours) }));
   }
 
   // Returns the last N weeks with submitted-report counts — drives the trend line chart.

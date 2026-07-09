@@ -1,7 +1,7 @@
 // Shared TypeScript types used across the frontend
 
 // Mirrors the Role enum from the backend
-export type Role = 'MEMBER' | 'MANAGER'
+export type Role = 'MEMBER' | 'MANAGER' | 'ADMIN'
 
 // Shape of the authenticated user returned by GET /auth/me
 export type AuthUser = {

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import ManagerRoute from '@/components/ManagerRoute'
+import AdminRoute from '@/components/AdminRoute'
 import Layout from '@/components/layout/Layout'
 
 // Auth pages
@@ -19,9 +20,13 @@ import DashboardPage from '@/pages/manager/DashboardPage'
 import TeamReportsPage from '@/pages/manager/TeamReportsPage'
 import AiChatPage from '@/pages/manager/AiChatPage'
 
+// Admin pages
+import UserManagementPage from '@/pages/admin/UserManagementPage'
+
 // Redirects the root path to the correct landing page based on role
 function RootRedirect() {
   const user = useAuthStore((state) => state.user)
+  if (user?.role === 'ADMIN')   return <Navigate to="/admin/users" replace />
   if (user?.role === 'MANAGER') return <Navigate to="/dashboard" replace />
   return <Navigate to="/reports" replace />
 }
@@ -48,11 +53,16 @@ export default function App() {
             <Route path="/reports/new" element={<CreateReportPage />} />
             <Route path="/reports/:id/edit" element={<EditReportPage />} />
 
-            {/* Manager-only routes */}
+            {/* Manager-only routes (ADMIN also passes ManagerRoute) */}
             <Route element={<ManagerRoute />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/team-reports" element={<TeamReportsPage />} />
               <Route path="/ai-chat" element={<AiChatPage />} />
+            </Route>
+
+            {/* Admin-only routes */}
+            <Route element={<AdminRoute />}>
+              <Route path="/admin/users" element={<UserManagementPage />} />
             </Route>
 
           </Route>

@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { getReports } from '@/api/reports'
+import { getReports, submitReport, deleteReport } from '@/api/reports'
 import type { Report } from '@/lib/types'
 
 // Format "2026-07-06" → "06 Jul 2026" without UTC shift
@@ -23,10 +23,7 @@ function ReportSkeleton() {
   return (
     <div className="flex flex-col gap-4">
       {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="animate-pulse rounded-xl border border-gray-200 bg-white p-5"
-        >
+        <div key={i} className="animate-pulse rounded-xl border border-gray-200 bg-white p-5">
           <div className="mb-3 h-4 w-48 rounded bg-gray-200" />
           <div className="mb-2 h-3 w-28 rounded bg-gray-100" />
           <div className="h-3 w-20 rounded bg-gray-100" />
@@ -37,7 +34,21 @@ function ReportSkeleton() {
 }
 
 // ── Single report card ────────────────────────────────────────────────────────
-function ReportCard({ report }: { report: Report }) {
+interface ReportCardProps {
+  report: Report
+  isSubmitting: boolean
+  isDeleting: boolean
+  onSubmit: (id: string) => void
+  onDelete: (id: string) => void
+}
+
+function ReportCard({ report, isSubmitting, isDeleting, onSubmit, onDelete }: ReportCardProps) {
+  function handleDelete() {
+    if (window.confirm('Delete this report? This cannot be undone.')) {
+      onDelete(report.id)
+    }
+  }
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
@@ -62,7 +73,7 @@ function ReportCard({ report }: { report: Report }) {
           )}
         </div>
 
-        {/* Right: status badge + edit link */}
+        {/* Right: badge + DRAFT actions */}
         <div className="flex shrink-0 flex-col items-end gap-2">
           <span
             className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusBadgeClass[report.status] ?? 'bg-gray-100 text-gray-600'}`}
@@ -70,15 +81,40 @@ function ReportCard({ report }: { report: Report }) {
             {report.status}
           </span>
 
-          {/* Submit / Delete actions added in 11.3 */}
-
           {report.status === 'DRAFT' && (
-            <Link
-              to={`/reports/${report.id}/edit`}
-              className="text-xs font-medium text-indigo-600 hover:underline"
-            >
-              Edit
-            </Link>
+            <div className="flex items-center gap-3">
+              {/* Submit — transitions DRAFT → SUBMITTED */}
+              <button
+                onClick={() => onSubmit(report.id)}
+                disabled={isSubmitting || isDeleting}
+                className="flex items-center gap-1 text-xs font-medium text-green-600 hover:underline disabled:opacity-50"
+              >
+                {isSubmitting && (
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                )}
+                Submit
+              </button>
+
+              {/* Edit — navigates to edit page */}
+              <Link
+                to={`/reports/${report.id}/edit`}
+                className="text-xs font-medium text-indigo-600 hover:underline"
+              >
+                Edit
+              </Link>
+
+              {/* Delete — asks for confirmation first */}
+              <button
+                onClick={handleDelete}
+                disabled={isSubmitting || isDeleting}
+                className="flex items-center gap-1 text-xs font-medium text-red-500 hover:underline disabled:opacity-50"
+              >
+                {isDeleting && (
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                )}
+                Delete
+              </button>
+            </div>
           )}
         </div>
 
@@ -89,13 +125,23 @@ function ReportCard({ report }: { report: Report }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function MyReportsPage() {
-  const {
-    data: reports,
-    isLoading,
-    isError,
-  } = useQuery({
+  const queryClient = useQueryClient()
+
+  const { data: reports, isLoading, isError } = useQuery({
     queryKey: ['reports'],
     queryFn: () => getReports().then((r) => r.data),
+  })
+
+  // Submit mutation — refreshes the list so the badge updates immediately
+  const submitMutation = useMutation({
+    mutationFn: (id: string) => submitReport(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reports'] }),
+  })
+
+  // Delete mutation — refreshes the list so the card disappears immediately
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteReport(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reports'] }),
   })
 
   return (
@@ -141,7 +187,15 @@ export default function MyReportsPage() {
       {reports && reports.length > 0 && (
         <div className="flex flex-col gap-4">
           {reports.map((report) => (
-            <ReportCard key={report.id} report={report} />
+            <ReportCard
+              key={report.id}
+              report={report}
+              // Show spinner only on the card whose id matches the active mutation
+              isSubmitting={submitMutation.isPending && submitMutation.variables === report.id}
+              isDeleting={deleteMutation.isPending && deleteMutation.variables === report.id}
+              onSubmit={(id) => submitMutation.mutate(id)}
+              onDelete={(id) => deleteMutation.mutate(id)}
+            />
           ))}
         </div>
       )}

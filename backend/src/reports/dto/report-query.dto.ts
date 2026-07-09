@@ -19,8 +19,13 @@ export class ReportQueryDto {
   @IsOptional()
   status?: ReportStatus;
 
-  // Filter by week start date e.g. "2026-07-07"
+  // Inclusive lower bound on weekStart — returns reports for weeks starting on or after this date
   @IsDateString()
   @IsOptional()
-  weekStart?: string;
+  weekStartFrom?: string;
+
+  // Inclusive upper bound on weekStart — returns reports for weeks starting on or before this date
+  @IsDateString()
+  @IsOptional()
+  weekStartTo?: string;
 }

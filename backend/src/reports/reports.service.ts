@@ -71,8 +71,11 @@ export class ReportsService {
     if (query.status) {
       qb.andWhere('report.status = :status', { status: query.status });
     }
-    if (query.weekStart) {
-      qb.andWhere('report.weekStart = :weekStart', { weekStart: query.weekStart });
+    if (query.weekStartFrom) {
+      qb.andWhere('report.weekStart >= :weekStartFrom', { weekStartFrom: query.weekStartFrom });
+    }
+    if (query.weekStartTo) {
+      qb.andWhere('report.weekStart <= :weekStartTo', { weekStartTo: query.weekStartTo });
     }
 
     const reports = await qb.getMany();

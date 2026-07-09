@@ -1,12 +1,13 @@
 import api from '@/lib/axios'
 import type { Report, CreateReportDto, UpdateReportDto } from '@/lib/types'
 
-// Optional filters for the reports list (managers can filter by userId/projectId/status/weekStart)
+// Optional filters for the reports list (managers can filter by userId/projectId/status/date range)
 export type ReportFilters = {
   userId?: string
   projectId?: string
   status?: string
-  weekStart?: string
+  weekStartFrom?: string  // inclusive lower bound — weeks starting on or after this date
+  weekStartTo?: string    // inclusive upper bound — weeks starting on or before this date
 }
 
 // GET /reports — returns own reports for MEMBER; accepts filters for MANAGER

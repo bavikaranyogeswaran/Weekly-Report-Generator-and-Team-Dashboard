@@ -24,10 +24,11 @@ interface Filters {
   userId: string
   projectId: string
   status: ReportStatus | ''
-  weekStart: string
+  weekStartFrom: string   // inclusive lower bound (YYYY-MM-DD)
+  weekStartTo: string     // inclusive upper bound (YYYY-MM-DD)
 }
 
-const EMPTY_FILTERS: Filters = { userId: '', projectId: '', status: '', weekStart: '' }
+const EMPTY_FILTERS: Filters = { userId: '', projectId: '', status: '', weekStartFrom: '', weekStartTo: '' }
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────
 function ReportsSkeleton() {
@@ -112,16 +113,17 @@ export default function TeamReportsPage() {
     queryKey: ['team-reports', filters],
     queryFn: () =>
       getReports({
-        userId:    filters.userId    || undefined,
-        projectId: filters.projectId || undefined,
-        status:    filters.status    || undefined,
-        weekStart: filters.weekStart || undefined,
+        userId:        filters.userId        || undefined,
+        projectId:     filters.projectId     || undefined,
+        status:        filters.status        || undefined,
+        weekStartFrom: filters.weekStartFrom || undefined,
+        weekStartTo:   filters.weekStartTo   || undefined,
       }).then((r) => r.data),
   })
 
   const hasActiveFilters =
     filters.userId !== '' || filters.projectId !== '' ||
-    filters.status !== '' || filters.weekStart !== ''
+    filters.status !== '' || filters.weekStartFrom !== '' || filters.weekStartTo !== ''
 
   function handleClear() {
     setFilters(EMPTY_FILTERS)
@@ -194,15 +196,25 @@ export default function TeamReportsPage() {
           </select>
         </div>
 
-        {/* Week start filter */}
+        {/* Date range — "Week from … to …" grouped under one label */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500">Week of</label>
+          <label className="text-xs font-medium text-gray-500">Week from</label>
           <input
             type="date"
-            value={filters.weekStart}
-            onChange={(e) =>
-              setFilters((f) => ({ ...f, weekStart: e.target.value }))
-            }
+            value={filters.weekStartFrom}
+            max={filters.weekStartTo || undefined}
+            onChange={(e) => setFilters((f) => ({ ...f, weekStartFrom: e.target.value }))}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500">Week to</label>
+          <input
+            type="date"
+            value={filters.weekStartTo}
+            min={filters.weekStartFrom || undefined}
+            onChange={(e) => setFilters((f) => ({ ...f, weekStartTo: e.target.value }))}
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
           />
         </div>

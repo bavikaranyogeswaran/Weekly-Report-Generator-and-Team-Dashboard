@@ -37,4 +37,9 @@ export const envValidationSchema = Joi.object({
 
   // IANA timezone name used for all date calculations (week boundaries, "today", etc.)
   APP_TIMEZONE: Joi.string().default('Asia/Colombo'),
+
+  // Admin seed — if all three are set, an ADMIN account is created on first startup
+  ADMIN_EMAIL:    Joi.string().email().optional(),
+  ADMIN_PASSWORD: Joi.string().min(8).optional(),
+  ADMIN_NAME:     Joi.string().optional(),
 });

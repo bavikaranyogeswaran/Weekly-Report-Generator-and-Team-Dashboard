@@ -11,6 +11,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { ReportsModule } from './reports/reports.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AiModule } from './ai/ai.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AiModule } from './ai/ai.module';
     ReportsModule,
     DashboardModule,
     AiModule,
+    AdminModule, // seeds the ADMIN account from env vars on startup
   ],
   controllers: [AppController],
   providers: [AppService],

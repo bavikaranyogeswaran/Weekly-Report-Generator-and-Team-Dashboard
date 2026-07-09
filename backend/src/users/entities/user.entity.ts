@@ -41,6 +41,14 @@ export class User {
   @Column({ name: 'verification_token', type: 'varchar', nullable: true, select: false })
   verificationToken: string | null;
 
+  // One-time token emailed when the user requests a password reset — select:false for safety
+  @Column({ name: 'password_reset_token', type: 'varchar', nullable: true, select: false })
+  passwordResetToken: string | null;
+
+  // Expiry for the password reset token — null when no reset is in progress
+  @Column({ name: 'password_reset_expiry', type: 'timestamp', nullable: true })
+  passwordResetExpiry: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

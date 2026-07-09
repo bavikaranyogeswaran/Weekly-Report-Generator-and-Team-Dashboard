@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
 
 // Role badge colours
@@ -128,9 +128,15 @@ export default function Layout() {
                 </span>
               </>
             )}
+            <Link
+              to="/settings"
+              className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
+            >
+              Settings
+            </Link>
             <button
               onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-red-600 transition-colors ml-2"
+              className="text-sm text-gray-500 hover:text-red-600 transition-colors ml-1"
             >
               Logout
             </button>

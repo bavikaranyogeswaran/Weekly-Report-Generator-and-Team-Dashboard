@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import InputField from '@/components/ui/InputField'
 import Button from '@/components/ui/Button'
@@ -125,7 +125,11 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        {/* Accounts are created by the admin — no self-registration link */}
+        <p className="mt-5 text-center text-sm text-gray-500">
+          <Link to="/forgot-password" className="text-indigo-600 hover:text-indigo-700 font-medium">
+            Forgot your password?
+          </Link>
+        </p>
 
       </div>
     </div>

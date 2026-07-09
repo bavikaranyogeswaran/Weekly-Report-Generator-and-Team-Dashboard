@@ -7,13 +7,6 @@ export type LoginResponse = {
   emailVerified: boolean
 }
 
-// POST /auth/register
-export const register = (data: {
-  name: string
-  email: string
-  password: string
-}) => api.post<{ message: string }>('/auth/register', data)
-
 // POST /auth/login
 export const login = (data: { email: string; password: string }) =>
   api.post<LoginResponse>('/auth/login', data)
@@ -26,3 +19,15 @@ export const getMe = (token?: string) =>
 // GET /auth/verify-email?token=... — email verification link handler
 export const verifyEmail = (token: string) =>
   api.get<{ message: string }>(`/auth/verify-email?token=${token}`)
+
+// PATCH /auth/password — logged-in user changes their own password
+export const changePassword = (data: { currentPassword: string; newPassword: string }) =>
+  api.patch<{ message: string }>('/auth/password', data)
+
+// POST /auth/forgot-password — public; triggers a password-reset email if the address is found
+export const forgotPassword = (data: { email: string }) =>
+  api.post<{ message: string }>('/auth/forgot-password', data)
+
+// POST /auth/reset-password — public; sets a new password using the token from the reset email
+export const resetPassword = (data: { token: string; newPassword: string }) =>
+  api.post<{ message: string }>('/auth/reset-password', data)

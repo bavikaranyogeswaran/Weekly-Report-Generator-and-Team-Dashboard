@@ -99,6 +99,29 @@ export class EmailService {
     });
   }
 
+  // Sends a password-reset link to the user.
+  // If SMTP is not configured, prints the link to the console (dev convenience).
+  async sendPasswordResetEmail(to: string, name: string, token: string): Promise<void> {
+    const frontendUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+    if (!this.transporter) {
+      console.log(
+        `\n[Email] No SMTP configured. Password reset link for ${to}:\n  ${resetUrl}\n`,
+      );
+      return;
+    }
+
+    const from = this.config.get<string>('SMTP_FROM') ?? 'noreply@weeklyreports.dev';
+
+    await this.transporter.sendMail({
+      from: `"Weekly Reports" <${from}>`,
+      to,
+      subject: 'Reset your password',
+      html: this.buildPasswordResetHtml(name, resetUrl),
+    });
+  }
+
   // Simple HTML template for the verification email
   private buildVerificationHtml(name: string, verifyUrl: string): string {
     return `
@@ -160,6 +183,34 @@ export class EmailService {
             <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
             <p style="color: #999; font-size: 12px; margin: 0;">
               Please keep your credentials safe. Contact your administrator if you need a password reset.
+            </p>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  // HTML template for the password-reset email
+  private buildPasswordResetHtml(name: string, resetUrl: string): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; margin: 0;">
+          <div style="max-width: 520px; margin: 0 auto; background: white; border-radius: 10px; padding: 32px;">
+            <h2 style="color: #4f46e5; margin-top: 0;">Weekly Report Generator</h2>
+            <p>Hi <strong>${name}</strong>,</p>
+            <p>We received a request to reset your password. Click the button below to set a new one.</p>
+            <a href="${resetUrl}"
+               style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px;
+                      border-radius: 6px; text-decoration: none; font-weight: bold; margin: 16px 0;">
+              Reset password
+            </a>
+            <p style="color: #555; font-size: 13px; margin-top: 24px;">
+              This link expires in 1 hour. If you did not request a password reset, you can safely ignore this email.
+            </p>
+            <p style="color: #555; font-size: 13px;">
+              Or paste this URL into your browser:<br/>
+              <a href="${resetUrl}" style="color: #4f46e5; word-break: break-all;">${resetUrl}</a>
             </p>
           </div>
         </body>

@@ -8,6 +8,8 @@ import Layout from '@/components/layout/Layout'
 // Auth pages
 import LoginPage from '@/pages/auth/LoginPage'
 import VerifyEmailPage from '@/pages/auth/VerifyEmailPage'
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
 
 // Member pages
 import MyReportsPage from '@/pages/member/MyReportsPage'
@@ -22,6 +24,9 @@ import ProjectsPage from '@/pages/manager/ProjectsPage'
 
 // Admin pages
 import UserManagementPage from '@/pages/admin/UserManagementPage'
+
+// Settings (all logged-in users)
+import SettingsPage from '@/pages/member/SettingsPage'
 
 // Redirects the root path to the correct landing page based on role
 function RootRedirect() {
@@ -39,6 +44,8 @@ export default function App() {
         {/* ── Public routes ─────────────────────────────── */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/verify" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* ── Protected routes (token required) ─────────── */}
         <Route element={<ProtectedRoute />}>
@@ -47,10 +54,11 @@ export default function App() {
             {/* Root: redirect to role-appropriate landing page */}
             <Route path="/" element={<RootRedirect />} />
 
-            {/* Member routes — accessible to both roles */}
+            {/* Member routes — accessible to all logged-in roles */}
             <Route path="/reports" element={<MyReportsPage />} />
             <Route path="/reports/new" element={<CreateReportPage />} />
             <Route path="/reports/:id/edit" element={<EditReportPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
 
             {/* Manager-only routes (ADMIN also passes ManagerRoute) */}
             <Route element={<ManagerRoute />}>

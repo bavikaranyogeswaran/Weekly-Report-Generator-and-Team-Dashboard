@@ -58,3 +58,41 @@ export type Project = {
   description: string | null
   createdAt: string
 }
+
+// ── Dashboard types (manager only) ──────────────────────────────────────────
+
+// GET /dashboard/summary — four headline numbers for the top stat tiles
+export type DashboardSummary = {
+  totalUsers: number
+  totalProjects: number
+  submittedThisWeek: number
+  submissionRate: number   // 0–100 percentage
+}
+
+// 'MISSING' means the user has no report at all for the given week
+export type SubmissionStatusValue = 'SUBMITTED' | 'DRAFT' | 'MISSING'
+
+// GET /dashboard/submission-status — one entry per team member for the current week
+export type SubmissionStatusItem = {
+  user: { id: string; name: string; email: string; role: Role }
+  status: SubmissionStatusValue
+  weekStart: string   // YYYY-MM-DD
+}
+
+// GET /dashboard/weekly-trends — one entry per week for the last N weeks
+export type WeeklyTrendItem = {
+  weekStart: string   // YYYY-MM-DD
+  submitted: number
+}
+
+// GET /dashboard/workload — total submitted hours per team member
+export type WorkloadItem = {
+  user: { id: string; name: string; email: string }
+  totalHours: number
+}
+
+// GET /dashboard/activity-feed — latest N submitted reports with user + project
+export type ActivityItem = Report & {
+  user: { id: string; name: string; email: string }
+  project: { id: string; name: string } | null
+}

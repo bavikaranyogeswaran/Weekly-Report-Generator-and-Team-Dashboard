@@ -1,10 +1,11 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
 
-// Role badge colours — MANAGER gets indigo, MEMBER gets slate
+// Role badge colours
 const roleBadgeClass: Record<string, string> = {
+  ADMIN:   'bg-purple-100 text-purple-700',
   MANAGER: 'bg-indigo-100 text-indigo-700',
-  MEMBER: 'bg-slate-100 text-slate-600',
+  MEMBER:  'bg-slate-100 text-slate-600',
 }
 
 export default function Layout() {
@@ -32,7 +33,9 @@ export default function Layout() {
 
             {/* Navigation links — active link gets an underline */}
             <nav className="hidden sm:flex items-center gap-6 text-sm font-medium">
-              {user?.role === 'MANAGER' && (
+
+              {/* Manager links — visible to MANAGER and ADMIN (ADMIN is a superset) */}
+              {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
                 <>
                   <NavLink
                     to="/dashboard"
@@ -66,6 +69,8 @@ export default function Layout() {
                   </NavLink>
                 </>
               )}
+
+              {/* Member link */}
               {user?.role === 'MEMBER' && (
                 <NavLink
                   to="/reports"
@@ -78,6 +83,24 @@ export default function Layout() {
                   My Reports
                 </NavLink>
               )}
+
+              {/* Admin-only link — separated by a thin divider */}
+              {user?.role === 'ADMIN' && (
+                <>
+                  <span className="h-4 w-px bg-gray-200" aria-hidden="true" />
+                  <NavLink
+                    to="/admin/users"
+                    className={({ isActive }) =>
+                      isActive
+                        ? 'text-purple-600 border-b-2 border-purple-600 pb-0.5'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }
+                  >
+                    Users
+                  </NavLink>
+                </>
+              )}
+
             </nav>
           </div>
 

@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import {
-  getDashboardSummary,
-} from '@/api/dashboard'
+import { getDashboardSummary } from '@/api/dashboard'
 import StatCard, { StatCardSkeleton } from '@/components/ui/StatCard'
+import SubmissionStatusChart from '@/components/charts/SubmissionStatusChart'
 
 // ── Summary stats row ─────────────────────────────────────────────────────────
 
@@ -68,7 +67,14 @@ export default function DashboardPage() {
 
       <SummaryRow />
 
-      {/* Charts and activity feed — added in steps 12.4–12.8 */}
+      {/* Charts row — more charts added in steps 12.5–12.8 */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-1 text-sm font-semibold text-gray-700">Submission status</h2>
+          <p className="mb-3 text-xs text-gray-400">Current week</p>
+          <SubmissionStatusChart />
+        </div>
+      </div>
     </div>
   )
 }

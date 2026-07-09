@@ -62,12 +62,13 @@ export type Project = {
 
 // ── Dashboard types (manager only) ──────────────────────────────────────────
 
-// GET /dashboard/summary — four headline numbers for the top stat tiles
+// GET /dashboard/summary — five headline numbers for the top stat tiles
 export type DashboardSummary = {
   totalUsers: number
   totalProjects: number
   submittedThisWeek: number
-  submissionRate: number   // 0–100 percentage
+  submissionRate: number  // 0–100 percentage
+  openBlockers: number    // submitted reports this week with non-empty blockers field
 }
 
 // 'MISSING' means the user has no report at all for the given week

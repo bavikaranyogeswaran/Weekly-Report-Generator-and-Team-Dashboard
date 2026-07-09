@@ -23,16 +23,23 @@ export class DashboardService {
     private readonly config: ConfigService,
   ) {}
 
-  // Returns four headline numbers for the top stat tiles on the manager dashboard
+  // Returns five headline numbers for the top stat tiles on the manager dashboard
   async getSummary() {
     const weekStart = this.getCurrentWeekMonday();
 
-    const [totalUsers, totalProjects, submittedThisWeek] = await Promise.all([
+    const [totalUsers, totalProjects, submittedThisWeek, openBlockers] = await Promise.all([
       this.usersRepo.count(),
       this.projectsRepo.count(),
       this.reportsRepo.count({
         where: { weekStart, status: ReportStatus.SUBMITTED },
       }),
+      // Count submitted reports this week where the blockers field is non-empty
+      this.reportsRepo
+        .createQueryBuilder('report')
+        .where('report.weekStart = :weekStart', { weekStart })
+        .andWhere('report.status = :status', { status: ReportStatus.SUBMITTED })
+        .andWhere("TRIM(report.blockers) != ''")
+        .getCount(),
     ]);
 
     // Percentage of members who submitted a report this week (0 if no users yet)
@@ -44,6 +51,7 @@ export class DashboardService {
       totalProjects,
       submittedThisWeek,
       submissionRate, // 0–100 percentage
+      openBlockers,   // submitted reports this week with non-empty blockers field
     };
   }
 

@@ -35,8 +35,8 @@ function SummaryRow() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => <StatCardSkeleton key={i} />)}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        {[1, 2, 3, 4, 5].map((i) => <StatCardSkeleton key={i} />)}
       </div>
     )
   }
@@ -50,7 +50,7 @@ function SummaryRow() {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
       <StatCard
         label="Team members"
         value={data.totalUsers}
@@ -77,6 +77,13 @@ function SummaryRow() {
           : data.submissionRate >= 50 ? 'amber'
           : 'rose'
         }
+      />
+      <StatCard
+        label="Open blockers"
+        value={data.openBlockers}
+        sublabel="this week"
+        // Rose when there are blockers, green when clear
+        accent={data.openBlockers > 0 ? 'rose' : 'green'}
       />
     </div>
   )

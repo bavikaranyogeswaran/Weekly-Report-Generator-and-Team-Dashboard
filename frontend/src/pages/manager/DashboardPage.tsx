@@ -3,6 +3,7 @@ import { getDashboardSummary } from '@/api/dashboard'
 import StatCard, { StatCardSkeleton } from '@/components/ui/StatCard'
 import SubmissionStatusChart from '@/components/charts/SubmissionStatusChart'
 import WeeklyTrendsChart from '@/components/charts/WeeklyTrendsChart'
+import WorkloadChart from '@/components/charts/WorkloadChart'
 
 // ── Summary stats row ─────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ export default function DashboardPage() {
 
       <SummaryRow />
 
-      {/* Charts row — more charts added in steps 12.5–12.8 */}
+      {/* Charts — top row: donut + area chart */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="mb-1 text-sm font-semibold text-gray-700">Submission status</h2>
@@ -80,6 +81,15 @@ export default function DashboardPage() {
           <h2 className="mb-1 text-sm font-semibold text-gray-700">Weekly submissions</h2>
           <p className="mb-3 text-xs text-gray-400">Last 8 weeks</p>
           <WeeklyTrendsChart />
+        </div>
+      </div>
+
+      {/* Charts — second row: workload bar + activity feed (added in 12.7) */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-1 text-sm font-semibold text-gray-700">Team workload</h2>
+          <p className="mb-3 text-xs text-gray-400">Total hours logged (all time)</p>
+          <WorkloadChart />
         </div>
       </div>
     </div>

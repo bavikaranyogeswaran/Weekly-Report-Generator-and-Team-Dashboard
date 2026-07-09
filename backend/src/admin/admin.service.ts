@@ -57,6 +57,27 @@ export class AdminService {
     return users.map(({ passwordHash: _pw, ...safe }) => safe);
   }
 
+  // Permanently deletes a user account.
+  // Guards: cannot delete yourself; cannot delete another ADMIN.
+  async deleteUser(targetId: string, requestingAdminId: string) {
+    if (targetId === requestingAdminId) {
+      throw new ForbiddenException('You cannot delete your own account');
+    }
+
+    const user = await this.usersRepo.findOne({ where: { id: targetId } });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role === Role.ADMIN) {
+      throw new ForbiddenException('The admin account cannot be deleted');
+    }
+
+    await this.usersRepo.remove(user);
+    return { message: 'User deleted successfully' };
+  }
+
   // Assigns MEMBER or MANAGER to a user.
   // requestingAdminId — prevent an admin from accidentally downgrading their own account.
   async assignRole(

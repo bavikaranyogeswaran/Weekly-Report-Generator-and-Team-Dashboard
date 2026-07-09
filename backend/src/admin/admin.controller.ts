@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -31,6 +34,16 @@ export class AdminController {
   @Post()
   createUser(@Body() dto: CreateUserDto) {
     return this.adminService.createUser(dto);
+  }
+
+  // DELETE /api/admin/users/:id — permanently removes a user; self-delete and ADMIN-delete blocked
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  deleteUser(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    return this.adminService.deleteUser(id, currentUser.userId);
   }
 
   // PATCH /api/admin/users/:id/role — assigns MEMBER or MANAGER; ADMIN cannot be assigned

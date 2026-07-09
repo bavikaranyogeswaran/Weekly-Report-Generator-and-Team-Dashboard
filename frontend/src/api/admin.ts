@@ -9,6 +9,10 @@ export const getAdminUsers = () =>
 export const patchUserRole = (userId: string, role: 'MEMBER' | 'MANAGER') =>
   api.patch<AuthUser>(`/admin/users/${userId}/role`, { role })
 
+// DELETE /admin/users/:id — permanently removes a user (self-delete and ADMIN-delete blocked)
+export const deleteAdminUser = (userId: string) =>
+  api.delete<{ message: string }>(`/admin/users/${userId}`)
+
 // POST /admin/users — admin creates a new user with a chosen role; sends welcome email
 export const createAdminUser = (dto: {
   name: string

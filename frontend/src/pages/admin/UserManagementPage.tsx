@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getAdminUsers, patchUserRole, createAdminUser } from '@/api/admin'
+import { getAdminUsers, patchUserRole, createAdminUser, deleteAdminUser } from '@/api/admin'
 import type { AuthUser, Role } from '@/lib/types'
 
 // Role badge colour map
@@ -158,7 +158,7 @@ function TableSkeleton() {
       <table className="w-full">
         <thead>
           <tr className="border-b border-gray-100">
-            {['User', 'Role', 'Joined', 'Change role'].map((h) => (
+            {['User', 'Role', 'Joined', 'Change role', ''].map((h) => (
               <th key={h} className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-400">
                 {h}
               </th>
@@ -180,6 +180,7 @@ function TableSkeleton() {
               <td className="px-4 py-3"><div className="h-5 w-16 rounded-full bg-gray-200" /></td>
               <td className="px-4 py-3"><div className="h-3 w-20 rounded bg-gray-100" /></td>
               <td className="px-4 py-3"><div className="h-7 w-28 rounded-lg bg-gray-200" /></td>
+              <td className="px-4 py-3"><div className="h-7 w-16 rounded-lg bg-gray-200" /></td>
             </tr>
           ))}
         </tbody>
@@ -194,15 +195,20 @@ function UserRow({
   user,
   onRoleChange,
   isUpdating,
+  onDelete,
+  isDeleting,
 }: {
   user: AuthUser
   onRoleChange: (userId: string, role: 'MEMBER' | 'MANAGER') => void
   isUpdating: boolean
+  onDelete: (userId: string) => void
+  isDeleting: boolean
 }) {
   const isAdmin = user.role === 'ADMIN'
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   return (
-    <tr className="transition hover:bg-gray-50/60">
+    <tr className={`transition hover:bg-gray-50/60 ${confirmDelete ? 'bg-red-50/60' : ''}`}>
 
       {/* Avatar + name + email */}
       <td className="px-4 py-3">
@@ -248,7 +254,6 @@ function UserRow({
               <option value="MEMBER">Member</option>
               <option value="MANAGER">Manager</option>
             </select>
-            {/* Spinner shown only while this row's mutation is in flight */}
             {isUpdating && (
               <svg className="h-4 w-4 animate-spin text-indigo-500" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -256,6 +261,36 @@ function UserRow({
               </svg>
             )}
           </div>
+        )}
+      </td>
+
+      {/* Delete — two-click confirm; ADMIN rows show nothing */}
+      <td className="px-4 py-3">
+        {isAdmin ? (
+          <span className="text-xs text-gray-300">—</span>
+        ) : confirmDelete ? (
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => { onDelete(user.id); setConfirmDelete(false) }}
+              disabled={isDeleting}
+              className="rounded-lg bg-red-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-red-700 disabled:opacity-60"
+            >
+              {isDeleting ? 'Deleting…' : 'Confirm'}
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-600 transition hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs text-gray-500 transition hover:border-red-300 hover:text-red-600"
+          >
+            Delete
+          </button>
         )}
       </td>
 
@@ -268,9 +303,10 @@ function UserRow({
 export default function UserManagementPage() {
   const queryClient = useQueryClient()
 
-  const [showCreate, setShowCreate] = useState(false)
-  const [pendingId, setPendingId]   = useState<string | null>(null)
-  const [errorMsg, setErrorMsg]     = useState<string | null>(null)
+  const [showCreate, setShowCreate]     = useState(false)
+  const [pendingRoleId, setPendingRoleId] = useState<string | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg]         = useState<string | null>(null)
 
   const { data: users, isLoading, isError } = useQuery({
     queryKey: ['admin-users'],
@@ -281,7 +317,7 @@ export default function UserManagementPage() {
     mutationFn: ({ userId, role }: { userId: string; role: 'MEMBER' | 'MANAGER' }) =>
       patchUserRole(userId, role).then((r) => r.data),
     onMutate: ({ userId }) => {
-      setPendingId(userId)
+      setPendingRoleId(userId)
       setErrorMsg(null)
     },
     onSuccess: () => {
@@ -291,7 +327,24 @@ export default function UserManagementPage() {
       setErrorMsg('Failed to update role. Please try again.')
     },
     onSettled: () => {
-      setPendingId(null)
+      setPendingRoleId(null)
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => deleteAdminUser(userId).then((r) => r.data),
+    onMutate: (userId) => {
+      setPendingDeleteId(userId)
+      setErrorMsg(null)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+    },
+    onError: () => {
+      setErrorMsg('Failed to delete user. Please try again.')
+    },
+    onSettled: () => {
+      setPendingDeleteId(null)
     },
   })
 
@@ -351,7 +404,7 @@ export default function UserManagementPage() {
           <table className="w-full min-w-[560px]">
             <thead>
               <tr className="border-b border-gray-100">
-                {['User', 'Role', 'Joined', 'Change role'].map((h) => (
+                {['User', 'Role', 'Joined', 'Change role', ''].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-400"
@@ -367,7 +420,9 @@ export default function UserManagementPage() {
                   key={user.id}
                   user={user}
                   onRoleChange={(userId, role) => roleMutation.mutate({ userId, role })}
-                  isUpdating={pendingId === user.id}
+                  isUpdating={pendingRoleId === user.id}
+                  onDelete={(userId) => deleteMutation.mutate(userId)}
+                  isDeleting={pendingDeleteId === user.id}
                 />
               ))}
             </tbody>

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getReports } from '@/api/reports'
+import { getUsers } from '@/api/users'
+import { getProjects } from '@/api/projects'
 import ProjectBadge from '@/components/ProjectBadge'
 import type { Report, ReportStatus } from '@/lib/types'
 
@@ -19,11 +21,13 @@ const STATUS_BADGE: Record<ReportStatus, string> = {
 
 // ── Filter state ──────────────────────────────────────────────────────────────
 interface Filters {
+  userId: string
+  projectId: string
   status: ReportStatus | ''
   weekStart: string
 }
 
-const EMPTY_FILTERS: Filters = { status: '', weekStart: '' }
+const EMPTY_FILTERS: Filters = { userId: '', projectId: '', status: '', weekStart: '' }
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────
 function ReportsSkeleton() {
@@ -99,17 +103,25 @@ function ReportCard({ report }: { report: Report }) {
 export default function TeamReportsPage() {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
 
+  // Populate member and project dropdowns — stale-time keeps them from refetching on every mount
+  const { data: users }    = useQuery({ queryKey: ['users'],    queryFn: () => getUsers().then((r) => r.data),    staleTime: 60_000 })
+  const { data: projects } = useQuery({ queryKey: ['projects'], queryFn: () => getProjects().then((r) => r.data), staleTime: 60_000 })
+
   const { data: reports, isLoading, isError } = useQuery({
-    // Key includes filters so the query refetches whenever a filter changes
+    // Key includes all filters so the query refetches whenever any filter changes
     queryKey: ['team-reports', filters],
     queryFn: () =>
       getReports({
+        userId:    filters.userId    || undefined,
+        projectId: filters.projectId || undefined,
         status:    filters.status    || undefined,
         weekStart: filters.weekStart || undefined,
       }).then((r) => r.data),
   })
 
-  const hasActiveFilters = filters.status !== '' || filters.weekStart !== ''
+  const hasActiveFilters =
+    filters.userId !== '' || filters.projectId !== '' ||
+    filters.status !== '' || filters.weekStart !== ''
 
   function handleClear() {
     setFilters(EMPTY_FILTERS)
@@ -135,6 +147,37 @@ export default function TeamReportsPage() {
 
       {/* Filter bar */}
       <div className="mb-5 flex flex-wrap items-end gap-3">
+
+        {/* Member filter */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500">Member</label>
+          <select
+            value={filters.userId}
+            onChange={(e) => setFilters((f) => ({ ...f, userId: e.target.value }))}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+          >
+            <option value="">All members</option>
+            {users?.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Project filter */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500">Project</label>
+          <select
+            value={filters.projectId}
+            onChange={(e) => setFilters((f) => ({ ...f, projectId: e.target.value }))}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+          >
+            <option value="">All projects</option>
+            {projects?.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Status filter */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-500">Status</label>
@@ -164,7 +207,7 @@ export default function TeamReportsPage() {
           />
         </div>
 
-        {/* Clear filters — only visible when filters are active */}
+        {/* Clear — only visible when any filter is active */}
         {hasActiveFilters && (
           <button
             onClick={handleClear}

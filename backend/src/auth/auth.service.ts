@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -8,12 +7,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto'; // built-in Node.js — no extra package needed
 import { User } from '../users/entities/user.entity';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
-import { EmailService } from '../email/email.service';
 
 // Number of bcrypt hashing rounds — higher = more secure but slower
 const BCRYPT_ROUNDS = 10;
@@ -27,43 +23,7 @@ export class AuthService {
 
     // Inject JwtService so we can sign tokens on login
     private readonly jwtService: JwtService,
-
-    // Inject EmailService to send the verification email on registration
-    private readonly emailService: EmailService,
   ) {}
-
-  // Creates a new MEMBER account, sends a verification email, and returns the saved user
-  async register(dto: RegisterDto) {
-    // Reject duplicate emails before we do any hashing work
-    const exists = await this.usersRepo.findOne({ where: { email: dto.email } });
-    if (exists) {
-      throw new ConflictException('An account with this email already exists');
-    }
-
-    // Hash the plain-text password — we never store it as-is
-    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
-
-    // Generate a 64-character random hex token for email verification
-    const verificationToken = randomBytes(32).toString('hex');
-
-    // Build the user — role defaults to MEMBER as defined in the entity
-    const user = this.usersRepo.create({
-      name: dto.name,
-      email: dto.email,
-      passwordHash,
-      verificationToken,
-      isVerified: false,
-    });
-
-    const saved = await this.usersRepo.save(user);
-
-    // Send verification email (falls back to console log if SMTP is not configured)
-    await this.emailService.sendVerificationEmail(saved.email, saved.name, verificationToken);
-
-    // Strip the password hash and verification token before sending the response
-    const { passwordHash: _pw, verificationToken: _vt, ...safeUser } = saved;
-    return safeUser;
-  }
 
   // Validates credentials and returns a signed JWT token
   async login(dto: LoginDto) {

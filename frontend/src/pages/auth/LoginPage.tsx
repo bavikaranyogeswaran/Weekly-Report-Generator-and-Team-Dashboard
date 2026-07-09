@@ -61,7 +61,10 @@ export default function LoginPage() {
       setAuth(loginData.access_token, user)
 
       // Step 4: redirect to the correct landing page based on role
-      navigate(user.role === 'MANAGER' ? '/dashboard' : '/reports', { replace: true })
+      const destination =
+        user.role === 'ADMIN'   ? '/admin/users' :
+        user.role === 'MANAGER' ? '/dashboard'   : '/reports'
+      navigate(destination, { replace: true })
     } catch (err: unknown) {
       // 401 = wrong credentials — use the same message for both wrong email and wrong password
       // to prevent user enumeration (matches the backend's intentional behaviour)

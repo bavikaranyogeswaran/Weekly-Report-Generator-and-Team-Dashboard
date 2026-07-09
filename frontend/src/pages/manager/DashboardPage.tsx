@@ -4,6 +4,7 @@ import StatCard, { StatCardSkeleton } from '@/components/ui/StatCard'
 import SubmissionStatusChart from '@/components/charts/SubmissionStatusChart'
 import WeeklyTrendsChart from '@/components/charts/WeeklyTrendsChart'
 import WorkloadChart from '@/components/charts/WorkloadChart'
+import ActivityFeed from '@/components/ActivityFeed'
 
 // ── Summary stats row ─────────────────────────────────────────────────────────
 
@@ -84,12 +85,18 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Charts — second row: workload bar + activity feed (added in 12.7) */}
+      {/* Charts — second row: workload bar + activity feed */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="mb-1 text-sm font-semibold text-gray-700">Team workload</h2>
           <p className="mb-3 text-xs text-gray-400">Total hours logged (all time)</p>
           <WorkloadChart />
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-1 text-sm font-semibold text-gray-700">Recent activity</h2>
+          <p className="mb-3 text-xs text-gray-400">Latest submitted reports</p>
+          <ActivityFeed />
         </div>
       </div>
     </div>

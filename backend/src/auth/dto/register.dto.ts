@@ -16,5 +16,5 @@ export class RegisterDto {
   password: string;
 
   // No role field — every new user is always registered as MEMBER.
-  // A manager promotes users to MANAGER later via PATCH /users/:id/role
+  // The admin assigns MEMBER or MANAGER later via PATCH /admin/users/:id/role
 }

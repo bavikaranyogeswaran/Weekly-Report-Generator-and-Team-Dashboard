@@ -1,11 +1,12 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { Report } from './entities/report.entity';
 import { Project } from '../projects/entities/project.entity';
 import { CreateReportDto } from './dto/create-report.dto';
@@ -46,8 +47,16 @@ export class ReportsService {
       status: ReportStatus.DRAFT,
     });
 
-    const saved = await this.reportsRepo.save(report);
-    return saved;
+    // save() may hit the unique (userId, weekStart) constraint if a report for this
+    // week already exists — translate that DB error into a clean 409 instead of a 500
+    try {
+      return await this.reportsRepo.save(report);
+    } catch (err) {
+      if (this.isDuplicateWeek(err)) {
+        throw new ConflictException('You already have a report for this week');
+      }
+      throw err;
+    }
   }
 
   // Returns reports with optional filters.
@@ -143,8 +152,26 @@ export class ReportsService {
     }
 
     Object.assign(report, dto);
-    const saved = await this.reportsRepo.save(report);
-    return saved;
+
+    // Changing weekStart can collide with another of the user's reports — surface the
+    // unique-constraint violation as a 409 rather than letting it become a 500
+    try {
+      return await this.reportsRepo.save(report);
+    } catch (err) {
+      if (this.isDuplicateWeek(err)) {
+        throw new ConflictException('You already have a report for this week');
+      }
+      throw err;
+    }
+  }
+
+  // True when the error is the Postgres unique-violation (code 23505) raised by the
+  // (userId, weekStart) constraint — used to convert a duplicate week into a 409.
+  private isDuplicateWeek(err: unknown): boolean {
+    return (
+      err instanceof QueryFailedError &&
+      (err as unknown as { code?: string }).code === '23505'
+    );
   }
 
   // Submits a DRAFT report — sets status to SUBMITTED and records the timestamp

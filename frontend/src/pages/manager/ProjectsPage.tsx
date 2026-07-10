@@ -1,7 +1,18 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getProjects, createProject, updateProject, deleteProject } from '@/api/projects'
-import type { Project } from '@/lib/types'
+import {
+  getProjects, createProject, updateProject, deleteProject,
+  getProject, addProjectMember, removeProjectMember,
+} from '@/api/projects'
+import { getUsers } from '@/api/users'
+import type { Project, AuthUser, Role } from '@/lib/types'
+
+// Role badge colours — mirrors the map used on the admin User management page
+const ROLE_BADGE: Record<Role, string> = {
+  MEMBER:  'bg-gray-100 text-gray-600',
+  MANAGER: 'bg-blue-100 text-blue-700',
+  ADMIN:   'bg-purple-100 text-purple-700',
+}
 
 // Preset palette — managers pick one instead of typing raw hex
 const COLOUR_PRESETS = [
@@ -133,17 +144,109 @@ function AddProjectForm({ onDone }: { onDone: () => void }) {
   )
 }
 
+// ── Members panel (shown when a row is expanded) ───────────────────────────────
+
+function ProjectMembers({ projectId, allUsers }: { projectId: string; allUsers: AuthUser[] }) {
+  const queryClient = useQueryClient()
+  const [selectedUserId, setSelectedUserId] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  const { data: project, isLoading } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => getProject(projectId).then((r) => r.data),
+  })
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+
+  const addMutation = useMutation({
+    mutationFn: (userId: string) => addProjectMember(projectId, userId).then((r) => r.data),
+    onSuccess: () => { invalidate(); setSelectedUserId('') },
+    onError: () => setError('Failed to add member.'),
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: (userId: string) => removeProjectMember(projectId, userId).then((r) => r.data),
+    onSuccess: invalidate,
+    onError: () => setError('Failed to remove member.'),
+  })
+
+  if (isLoading) {
+    return <p className="px-4 py-3 text-xs text-gray-400">Loading members…</p>
+  }
+
+  const members = project?.members ?? []
+  const memberIds = new Set(members.map((m) => m.id))
+  const available = allUsers.filter((u) => !memberIds.has(u.id))
+
+  return (
+    <div className="border-t border-gray-100 px-4 py-3">
+      {/* Current members */}
+      {members.length === 0 ? (
+        <p className="text-xs text-gray-400">No members assigned yet.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {members.map((m) => (
+            <span
+              key={m.id}
+              className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 py-1 pl-2.5 pr-1.5 text-xs"
+            >
+              <span className="text-gray-700">{m.name}</span>
+              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${ROLE_BADGE[m.role]}`}>
+                {m.role.charAt(0) + m.role.slice(1).toLowerCase()}
+              </span>
+              <button
+                onClick={() => { setError(null); removeMutation.mutate(m.id) }}
+                disabled={removeMutation.isPending}
+                title={`Remove ${m.name}`}
+                className="ml-0.5 text-gray-400 transition hover:text-red-600 disabled:opacity-50"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Add member */}
+      <div className="mt-3 flex items-center gap-2">
+        <select
+          value={selectedUserId}
+          onChange={(e) => setSelectedUserId(e.target.value)}
+          className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs text-gray-700 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+        >
+          <option value="">
+            {available.length === 0 ? 'Everyone is already assigned' : 'Select a user…'}
+          </option>
+          {available.map((u) => (
+            <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+          ))}
+        </select>
+        <button
+          onClick={() => { setError(null); addMutation.mutate(selectedUserId) }}
+          disabled={!selectedUserId || addMutation.isPending}
+          className="rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {addMutation.isPending ? 'Adding…' : 'Add'}
+        </button>
+      </div>
+
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+    </div>
+  )
+}
+
 // ── Project row (view / edit / delete-confirm modes) ──────────────────────────
 
 type RowMode = 'view' | 'edit' | 'confirm-delete'
 
-function ProjectRow({ project }: { project: Project }) {
+function ProjectRow({ project, allUsers }: { project: Project; allUsers: AuthUser[] }) {
   const queryClient = useQueryClient()
   const [mode, setMode]         = useState<RowMode>('view')
   const [name, setName]         = useState(project.name)
   const [desc, setDesc]         = useState(project.description ?? '')
   const [colour, setColour]     = useState(project.color)
   const [error, setError]       = useState<string | null>(null)
+  const [showMembers, setShowMembers] = useState(false)
 
   // Reset edit fields if the project data changes (e.g. after save)
   function startEdit() {
@@ -191,39 +294,53 @@ function ProjectRow({ project }: { project: Project }) {
   // ── View mode ──────────────────────────────────────────────────────────────
   if (mode === 'view') {
     return (
-      <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
-        {/* Colour dot */}
-        <span
-          className="h-3 w-3 shrink-0 rounded-full"
-          style={{ backgroundColor: project.color }}
-        />
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex items-center gap-4 px-4 py-3">
+          {/* Colour dot */}
+          <span
+            className="h-3 w-3 shrink-0 rounded-full"
+            style={{ backgroundColor: project.color }}
+          />
 
-        {/* Name + description */}
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-gray-800">{project.name}</p>
-          {project.description && (
-            <p className="truncate text-xs text-gray-400">{project.description}</p>
-          )}
+          {/* Name + description */}
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium text-gray-800">{project.name}</p>
+            {project.description && (
+              <p className="truncate text-xs text-gray-400">{project.description}</p>
+            )}
+          </div>
+
+          {/* Error from a failed delete */}
+          {error && <p className="text-xs text-red-600">{error}</p>}
+
+          {/* Actions */}
+          <div className="flex shrink-0 gap-2">
+            <button
+              onClick={() => setShowMembers((v) => !v)}
+              className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
+                showMembers
+                  ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-600'
+              }`}
+            >
+              Members
+            </button>
+            <button
+              onClick={startEdit}
+              className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => setMode('confirm-delete')}
+              className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 transition hover:border-red-300 hover:text-red-600"
+            >
+              Delete
+            </button>
+          </div>
         </div>
 
-        {/* Error from a failed delete */}
-        {error && <p className="text-xs text-red-600">{error}</p>}
-
-        {/* Actions */}
-        <div className="flex shrink-0 gap-2">
-          <button
-            onClick={startEdit}
-            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => setMode('confirm-delete')}
-            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 transition hover:border-red-300 hover:text-red-600"
-          >
-            Delete
-          </button>
-        </div>
+        {showMembers && <ProjectMembers projectId={project.id} allUsers={allUsers} />}
       </div>
     )
   }
@@ -357,6 +474,12 @@ export default function ProjectsPage() {
     queryFn: () => getProjects().then((r) => r.data),
   })
 
+  // Fetched once here (not per-row) to power each row's "add member" picker
+  const { data: allUsers } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => getUsers().then((r) => r.data),
+  })
+
   return (
     <div>
 
@@ -415,7 +538,7 @@ export default function ProjectsPage() {
       {projects && projects.length > 0 && (
         <div className="flex flex-col gap-3">
           {projects.map((project) => (
-            <ProjectRow key={project.id} project={project} />
+            <ProjectRow key={project.id} project={project} allUsers={allUsers ?? []} />
           ))}
         </div>
       )}

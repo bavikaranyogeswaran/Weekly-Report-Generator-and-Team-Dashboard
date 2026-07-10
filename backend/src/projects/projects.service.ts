@@ -33,8 +33,18 @@ export class ProjectsService {
     return this.projectsRepo.save(project);
   }
 
-  // Returns all projects sorted by newest first, members relation not loaded here (list view)
-  findAll() {
+  // Returns all projects sorted by newest first, members relation not loaded here (list view).
+  // When userId is given, restricts the list to projects that user is assigned to —
+  // powers the report form's "your projects" dropdown.
+  findAll(userId?: string) {
+    if (userId) {
+      return this.projectsRepo
+        .createQueryBuilder('project')
+        .innerJoin('project.members', 'member', 'member.id = :userId', { userId })
+        .orderBy('project.createdAt', 'DESC')
+        .getMany();
+    }
+
     return this.projectsRepo.find({ order: { createdAt: 'DESC' } });
   }
 

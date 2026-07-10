@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getProjects } from '@/api/projects'
+import { getMyProjects } from '@/api/projects'
 import InputField from '@/components/ui/InputField'
 import TextareaField from '@/components/ui/TextareaField'
 import Button from '@/components/ui/Button'
@@ -72,10 +72,11 @@ export default function ReportForm({
   })
   const [errors, setErrors] = useState<FormErrors>({})
 
-  // Fetch project list for the select dropdown
+  // Fetch only the projects this user is assigned to — a distinct cache key from
+  // the manager's full project list (['projects']) since the two are different scopes
   const { data: projects } = useQuery({
-    queryKey: ['projects'],
-    queryFn: () => getProjects().then((r) => r.data),
+    queryKey: ['projects', 'mine'],
+    queryFn: () => getMyProjects().then((r) => r.data),
   })
 
   function handleChange(
@@ -141,6 +142,12 @@ export default function ReportForm({
             </option>
           ))}
         </select>
+        {/* Only shown once the fetch has resolved and come back empty — avoids a flash during loading */}
+        {projects?.length === 0 && (
+          <p className="text-xs text-gray-400">
+            You're not assigned to any projects yet. Ask your manager to add you to one.
+          </p>
+        )}
       </div>
 
       <TextareaField

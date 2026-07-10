@@ -1,9 +1,14 @@
 import api from '@/lib/axios'
 import type { Project } from '@/lib/types'
 
-// GET /projects — returns all projects (used to populate report forms and the projects page)
+// GET /projects — returns all projects (used to populate the projects management page)
 export const getProjects = () =>
   api.get<Project[]>('/projects')
+
+// GET /projects?mine=true — returns only the projects the current user is assigned to
+// (used to populate the report form's project dropdown)
+export const getMyProjects = () =>
+  api.get<Project[]>('/projects', { params: { mine: true } })
 
 // GET /projects/:id — returns a single project with its members
 export const getProject = (id: string) =>
@@ -20,3 +25,11 @@ export const updateProject = (id: string, dto: { name?: string; description?: st
 // DELETE /projects/:id — manager permanently removes a project
 export const deleteProject = (id: string) =>
   api.delete<{ message: string }>(`/projects/${id}`)
+
+// POST /projects/:id/members — manager assigns a user to the project; returns the updated project
+export const addProjectMember = (projectId: string, userId: string) =>
+  api.post<Project>(`/projects/${projectId}/members`, { userId })
+
+// DELETE /projects/:id/members/:userId — manager removes a user from the project
+export const removeProjectMember = (projectId: string, userId: string) =>
+  api.delete<Project>(`/projects/${projectId}/members/${userId}`)

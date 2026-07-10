@@ -69,6 +69,8 @@ export type Project = {
   description: string | null
   color: string            // hex accent colour shown as a dot next to the name
   createdAt: string
+  // Only present on GET /projects/:id — the list endpoint doesn't load this relation
+  members?: { id: string; name: string; email: string; role: Role }[]
 }
 
 // ── Dashboard types (manager only) ──────────────────────────────────────────

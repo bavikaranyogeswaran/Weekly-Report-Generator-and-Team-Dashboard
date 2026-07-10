@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
@@ -18,6 +19,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 // All routes require a valid JWT — applied at the class level
 @Controller('projects')
@@ -35,9 +38,14 @@ export class ProjectsController {
   }
 
   // GET /api/projects — any authenticated user can list all projects
+  // GET /api/projects?mine=true — scopes the list to projects the caller is assigned to
+  // (powers the report form's project dropdown)
   @Get()
-  findAll() {
-    return this.projectsService.findAll();
+  findAll(
+    @Query('mine') mine: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.projectsService.findAll(mine === 'true' ? user.userId : undefined);
   }
 
   // GET /api/projects/:id — any authenticated user can view a single project (with members)

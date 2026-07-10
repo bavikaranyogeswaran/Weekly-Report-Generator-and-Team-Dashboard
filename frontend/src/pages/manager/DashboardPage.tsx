@@ -52,7 +52,9 @@ function SummaryRow() {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
       <StatCard
-        label="Team members"
+        // Counts every role (admin/manager/member) — "Total users" avoids implying
+        // this is the MEMBER-only headcount used elsewhere (see memberCount below)
+        label="Total users"
         value={data.totalUsers}
         accent="indigo"
       />

@@ -193,17 +193,26 @@ function ReportCard({ report }: { report: Report }) {
   )
 }
 
+const PAGE_SIZE = 20
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function TeamReportsPage() {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
+  const [page, setPage] = useState(1)
+
+  // Changing any filter resets to page 1 so stale offsets don't produce empty pages
+  function updateFilters(patch: Partial<Filters>) {
+    setFilters((f) => ({ ...f, ...patch }))
+    setPage(1)
+  }
 
   // Populate member and project dropdowns — stale-time keeps them from refetching on every mount
   const { data: users }    = useQuery({ queryKey: ['users'],    queryFn: () => getUsers().then((r) => r.data),    staleTime: 60_000 })
   const { data: projects } = useQuery({ queryKey: ['projects'], queryFn: () => getProjects().then((r) => r.data), staleTime: 60_000 })
 
-  const { data: reports, isLoading, isError } = useQuery({
-    // Key includes all filters so the query refetches whenever any filter changes
-    queryKey: ['team-reports', filters],
+  const { data: result, isLoading, isError } = useQuery({
+    // Key includes filters + page so the query refetches whenever either changes
+    queryKey: ['team-reports', filters, page],
     queryFn: () =>
       getReports({
         userId:        filters.userId        || undefined,
@@ -211,8 +220,14 @@ export default function TeamReportsPage() {
         status:        filters.status        || undefined,
         weekStartFrom: filters.weekStartFrom || undefined,
         weekStartTo:   filters.weekStartTo   || undefined,
+        page,
+        limit: PAGE_SIZE,
       }).then((r) => r.data),
   })
+
+  const reports    = result?.data
+  const total      = result?.total ?? 0
+  const totalPages = result?.totalPages ?? 1
 
   const hasActiveFilters =
     filters.userId !== '' || filters.projectId !== '' ||
@@ -220,6 +235,7 @@ export default function TeamReportsPage() {
 
   function handleClear() {
     setFilters(EMPTY_FILTERS)
+    setPage(1)
   }
 
   return (
@@ -232,10 +248,10 @@ export default function TeamReportsPage() {
             All reports submitted by your team
           </p>
         </div>
-        {/* Live count badge */}
-        {!isLoading && reports && (
+        {/* Total result count badge */}
+        {!isLoading && result && (
           <span className="mt-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-500">
-            {reports.length} result{reports.length !== 1 ? 's' : ''}
+            {total} result{total !== 1 ? 's' : ''}
           </span>
         )}
       </div>
@@ -248,7 +264,7 @@ export default function TeamReportsPage() {
           <label className="text-xs font-medium text-gray-500">Member</label>
           <select
             value={filters.userId}
-            onChange={(e) => setFilters((f) => ({ ...f, userId: e.target.value }))}
+            onChange={(e) => updateFilters({ userId: e.target.value })}
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
           >
             <option value="">All members</option>
@@ -263,7 +279,7 @@ export default function TeamReportsPage() {
           <label className="text-xs font-medium text-gray-500">Project</label>
           <select
             value={filters.projectId}
-            onChange={(e) => setFilters((f) => ({ ...f, projectId: e.target.value }))}
+            onChange={(e) => updateFilters({ projectId: e.target.value })}
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
           >
             <option value="">All projects</option>
@@ -278,9 +294,7 @@ export default function TeamReportsPage() {
           <label className="text-xs font-medium text-gray-500">Status</label>
           <select
             value={filters.status}
-            onChange={(e) =>
-              setFilters((f) => ({ ...f, status: e.target.value as ReportStatus | '' }))
-            }
+            onChange={(e) => updateFilters({ status: e.target.value as ReportStatus | '' })}
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
           >
             <option value="">All statuses</option>
@@ -296,7 +310,7 @@ export default function TeamReportsPage() {
             type="date"
             value={filters.weekStartFrom}
             max={filters.weekStartTo || undefined}
-            onChange={(e) => setFilters((f) => ({ ...f, weekStartFrom: e.target.value }))}
+            onChange={(e) => updateFilters({ weekStartFrom: e.target.value })}
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
           />
         </div>
@@ -307,7 +321,7 @@ export default function TeamReportsPage() {
             type="date"
             value={filters.weekStartTo}
             min={filters.weekStartFrom || undefined}
-            onChange={(e) => setFilters((f) => ({ ...f, weekStartTo: e.target.value }))}
+            onChange={(e) => updateFilters({ weekStartTo: e.target.value })}
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
           />
         </div>
@@ -334,7 +348,7 @@ export default function TeamReportsPage() {
       )}
 
       {/* Empty state */}
-      {!isLoading && !isError && reports?.length === 0 && (
+      {!isLoading && !isError && total === 0 && (
         <div className="rounded-xl border border-dashed border-gray-300 bg-white py-16 text-center">
           <p className="text-sm text-gray-400">
             {hasActiveFilters
@@ -358,6 +372,31 @@ export default function TeamReportsPage() {
           {reports.map((report) => (
             <ReportCard key={report.id} report={report} />
           ))}
+        </div>
+      )}
+
+      {/* Pagination controls — only shown when there are multiple pages */}
+      {totalPages > 1 && (
+        <div className="mt-5 flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total} reports
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => p - 1)}
+              disabled={page === 1}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              ← Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= totalPages}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next →
+            </button>
+          </div>
         </div>
       )}
     </div>

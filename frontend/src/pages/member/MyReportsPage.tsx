@@ -140,15 +140,22 @@ function ReportCard({ report, isSubmitting, isDeleting, onSubmit, onDelete }: Re
   )
 }
 
+const PAGE_SIZE = 20
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function MyReportsPage() {
   const queryClient = useQueryClient()
   const [actionError, setActionError] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
 
-  const { data: reports, isLoading, isError } = useQuery({
-    queryKey: ['reports'],
-    queryFn: () => getReports().then((r) => r.data),
+  const { data: result, isLoading, isError } = useQuery({
+    queryKey: ['reports', page],
+    queryFn: () => getReports({ page, limit: PAGE_SIZE }).then((r) => r.data),
   })
+
+  const reports    = result?.data
+  const totalPages = result?.totalPages ?? 1
+  const total      = result?.total ?? 0
 
   // Submit mutation — refreshes the list so the badge updates immediately
   const submitMutation = useMutation({
@@ -210,7 +217,7 @@ export default function MyReportsPage() {
       )}
 
       {/* Empty state */}
-      {!isLoading && !isError && reports?.length === 0 && (
+      {!isLoading && !isError && total === 0 && (
         <div className="rounded-xl border border-dashed border-gray-300 bg-white py-16 text-center">
           <p className="text-sm text-gray-400">No reports yet.</p>
           <Link
@@ -236,6 +243,31 @@ export default function MyReportsPage() {
               onDelete={(id) => deleteMutation.mutate(id)}
             />
           ))}
+        </div>
+      )}
+
+      {/* Pagination controls — only shown when there are multiple pages */}
+      {totalPages > 1 && (
+        <div className="mt-5 flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total} reports
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => p - 1)}
+              disabled={page === 1}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              ← Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= totalPages}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next →
+            </button>
+          </div>
         </div>
       )}
     </div>

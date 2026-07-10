@@ -1,4 +1,5 @@
-import { IsDateString, IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsDateString, IsEnum, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 import { ReportStatus } from '../../common/enums/report-status.enum';
 
 // Query parameters accepted by GET /reports
@@ -28,4 +29,19 @@ export class ReportQueryDto {
   @IsDateString()
   @IsOptional()
   weekStartTo?: string;
+
+  // Pagination — 1-based page number
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  // Max rows per page — capped at 100 to prevent unbounded queries
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
 }

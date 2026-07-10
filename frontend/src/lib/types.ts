@@ -1,5 +1,14 @@
 // Shared TypeScript types used across the frontend
 
+// Wrapper returned by paginated list endpoints
+export type PaginatedResult<T> = {
+  data: T[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
 // Mirrors the Role enum from the backend
 export type Role = 'MEMBER' | 'MANAGER' | 'ADMIN'
 

@@ -83,10 +83,21 @@ export class ReportsService {
       qb.andWhere('report.weekStart <= :weekStartTo', { weekStartTo: query.weekStartTo });
     }
 
-    const reports = await qb.getMany();
+    const page  = query.page  ?? 1;
+    const limit = query.limit ?? 20;
 
-    // Strip passwordHash from every loaded user before returning
-    return reports.map((r) => this.stripUserPassword(r));
+    const [reports, total] = await qb
+      .take(limit)
+      .skip((page - 1) * limit)
+      .getManyAndCount();
+
+    return {
+      data: reports.map((r) => this.stripUserPassword(r)),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   // Returns a single report — MEMBER can only view their own (403 otherwise)

@@ -7,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
   Unique,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Project } from '../../projects/entities/project.entity';
@@ -19,7 +20,8 @@ export class Report {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // The Monday and Sunday of the week this report covers
+  // Indexed — appears in WHERE / ORDER BY / GROUP BY across reports, dashboard, and AI queries
+  @Index()
   @Column({ name: 'week_start', type: 'date' })
   weekStart: Date;
 
@@ -44,7 +46,8 @@ export class Report {
   @Column({ type: 'text', nullable: true })
   notes: string | null;
 
-  // DRAFT → SUBMITTED when the member clicks "Submit"; LATE if week passes with no submission
+  // Indexed — filtered in every list query and counted in dashboard aggregations
+  @Index()
   @Column({ type: 'enum', enum: ReportStatus, default: ReportStatus.DRAFT })
   status: ReportStatus;
 

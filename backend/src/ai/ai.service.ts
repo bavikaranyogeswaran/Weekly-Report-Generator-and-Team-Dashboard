@@ -7,10 +7,16 @@ import { Report } from '../reports/entities/report.entity';
 import { User } from '../users/entities/user.entity';
 import { ReportStatus } from '../common/enums/report-status.enum';
 
+// 5-minute TTL for the team context cache — balances freshness against DB round trips
+const CONTEXT_CACHE_TTL_MS = 5 * 60 * 1_000;
+
 @Injectable()
 export class AiService {
   private readonly groq: Groq;
   private readonly modelName: string;
+
+  // Simple in-memory cache — invalidated after TTL so the AI always sees recent submissions
+  private contextCache: { value: string; expiresAt: number } | null = null;
 
   constructor(
     private readonly config: ConfigService,
@@ -71,8 +77,11 @@ export class AiService {
   }
 
   // Builds a structured text block from live team data so the model can reason over it.
-  // Includes this week's submission status and the last 20 submitted reports.
+  // Result is cached for 5 minutes — chat requests within the same window share one DB fetch.
   async buildTeamContext(): Promise<string> {
+    if (this.contextCache && Date.now() < this.contextCache.expiresAt) {
+      return this.contextCache.value;
+    }
     const tz = this.config.get<string>('APP_TIMEZONE') ?? 'Asia/Colombo';
     const weekMonday = this.getCurrentWeekMonday();
     const weekLabel = weekMonday.toLocaleDateString('en-CA', { timeZone: tz });
@@ -117,7 +126,7 @@ export class AiService {
       return lines.filter(Boolean).join('\n');
     });
 
-    return [
+    const context = [
       `=== TEAM REPORT CONTEXT (timezone: ${tz}) ===`,
       ``,
       `CURRENT WEEK (${weekLabel}) SUBMISSION STATUS:`,
@@ -127,6 +136,11 @@ export class AiService {
       ...reportLines,
       `---`,
     ].join('\n');
+
+    // Store in cache — expires after TTL so subsequent chat messages reuse this result
+    this.contextCache = { value: context, expiresAt: Date.now() + CONTEXT_CACHE_TTL_MS };
+
+    return context;
   }
 
   // Returns the Monday of the current week in the configured timezone

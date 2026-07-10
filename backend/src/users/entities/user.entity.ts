@@ -53,8 +53,11 @@ export class User {
   @Column({ name: 'password_reset_token', type: 'varchar', nullable: true, select: false })
   passwordResetToken: string | null;
 
-  // Expiry for the password reset token — null when no reset is in progress
-  @Column({ name: 'password_reset_expiry', type: 'timestamp', nullable: true })
+  // Expiry for the password reset token — null when no reset is in progress.
+  // select:false so it is never returned in user/admin responses (it reveals whether an
+  // invite/reset is pending and when it expires); the reset flow only filters on it in a
+  // WHERE clause and writes it, so it never needs to be loaded into a response.
+  @Column({ name: 'password_reset_expiry', type: 'timestamp', nullable: true, select: false })
   passwordResetExpiry: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

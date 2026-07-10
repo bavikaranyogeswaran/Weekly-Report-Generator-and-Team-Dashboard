@@ -27,6 +27,11 @@ export class ReportsService {
 
   // Creates a new DRAFT report linked to the calling user
   async create(userId: string, dto: CreateReportDto) {
+    // Reject impossible date ranges before touching the DB
+    if (new Date(dto.weekEnd) < new Date(dto.weekStart)) {
+      throw new BadRequestException('weekEnd must be on or after weekStart');
+    }
+
     // Validate the project exists before saving to give a clear 404 instead of a DB error
     if (dto.projectId) {
       const project = await this.projectsRepo.findOne({ where: { id: dto.projectId } });
@@ -109,6 +114,13 @@ export class ReportsService {
 
     if (report.status !== ReportStatus.DRAFT) {
       throw new BadRequestException('Only DRAFT reports can be edited');
+    }
+
+    // Reject impossible date ranges when both week dates are being updated together
+    const effectiveStart = dto.weekStart ?? report.weekStart?.toString();
+    const effectiveEnd   = dto.weekEnd   ?? report.weekEnd?.toString();
+    if (effectiveStart && effectiveEnd && new Date(effectiveEnd) < new Date(effectiveStart)) {
+      throw new BadRequestException('weekEnd must be on or after weekStart');
     }
 
     // Validate new projectId if it is being changed

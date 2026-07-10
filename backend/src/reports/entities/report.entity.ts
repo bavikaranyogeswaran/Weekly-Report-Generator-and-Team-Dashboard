@@ -6,12 +6,15 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Unique,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Project } from '../../projects/entities/project.entity';
 import { ReportStatus } from '../../common/enums/report-status.enum';
 
-@Entity('reports') // maps to the "reports" table in PostgreSQL
+// One report per user per week — enforced at the DB level so concurrent requests can't race past app-level checks
+@Entity('reports')
+@Unique(['userId', 'weekStart'])
 export class Report {
   @PrimaryGeneratedColumn('uuid')
   id: string;

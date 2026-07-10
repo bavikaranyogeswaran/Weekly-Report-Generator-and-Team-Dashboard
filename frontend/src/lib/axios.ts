@@ -9,10 +9,16 @@ const api = axios.create({
 
 // Request interceptor — read the current token from Zustand and attach it to every request.
 // useAuthStore.getState() works outside React components (Zustand's vanilla getter).
+// Skips calls that already set their own Authorization header (e.g. getMe during login,
+// which must use the just-issued token rather than whatever stale token still sits in the
+// store from a previous session — otherwise logging in as a new user without logging out
+// first fetches the PREVIOUS user's profile instead of the one who just signed in).
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  if (!config.headers.Authorization) {
+    const token = useAuthStore.getState().token
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
   }
   return config
 })

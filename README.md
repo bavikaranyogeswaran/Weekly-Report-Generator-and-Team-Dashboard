@@ -9,7 +9,7 @@ A full-stack web app where team members submit structured weekly reports and man
 | Frontend | React 18 + TypeScript + Vite      |
 | Backend  | NestJS + TypeScript               |
 | Database | PostgreSQL                        |
-| AI       | Google Gemini 1.5 Flash (free)    |
+| AI       | Groq (Llama 3.3 70B, free tier)   |
 | Styling  | Tailwind CSS                      |
 | Charts   | Recharts                          |
 
@@ -27,7 +27,7 @@ weekly-report-app/
 ### Prerequisites
 - Node.js 18+
 - PostgreSQL 16+
-- A free Google Gemini API key from https://aistudio.google.com
+- A free Groq API key from https://console.groq.com (no credit card needed)
 
 ### 1. Install dependencies
 
@@ -48,7 +48,7 @@ npm install
 cp .env.example .env
 ```
 
-Required variables in `backend/.env`:
+Required variables in `backend/.env` (see `backend/.env.example` for the full list):
 ```
 DB_HOST=localhost
 DB_PORT=5432
@@ -56,7 +56,11 @@ DB_USER=postgres
 DB_PASS=yourpassword
 DB_NAME=weekly_reports
 JWT_SECRET=your_jwt_secret_here
-GEMINI_API_KEY=your_free_gemini_key_here
+GROQ_API_KEY=your_free_groq_key_here
+APP_TIMEZONE=Asia/Colombo
+ADMIN_EMAIL=admin@yourdomain.com
+ADMIN_PASSWORD=ChangeThisStrongPassword1!
+ADMIN_NAME=System Admin
 ```
 
 ### 3. Set up the database
@@ -85,13 +89,15 @@ npm run dev
 ## User Roles
 
 - **Team Member** — create and manage their own weekly reports
-- **Manager** — view all team reports, access dashboard, use AI assistant
+- **Manager / Admin** — view all team reports, access dashboard, use AI assistant, manage users and projects
+
+There is no public self-registration — accounts are created by an admin, who emails the new user an invite link to set their password on first login.
 
 ## Key Features
 
 - JWT-based authentication with role-based access control
 - Fixed weekly report structure (consistent across all team members)
 - Manager dashboard with charts and metrics
-- AI chat assistant powered by Google Gemini (free tier)
-- Project/category management
+- AI chat assistant powered by Groq (free tier)
+- Project/category management, with team members assignable to projects
 - Submission status tracking (Draft / Submitted / Late)

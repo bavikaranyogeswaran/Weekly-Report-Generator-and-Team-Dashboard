@@ -195,6 +195,8 @@ function UserRow({
 }) {
   const isAdmin = user.role === 'ADMIN'
   const [confirmDelete, setConfirmDelete] = useState(false)
+  // Role change requires a second click to confirm — prevents accidental misclicks
+  const [pendingRole, setPendingRole] = useState<'MEMBER' | 'MANAGER' | null>(null)
 
   return (
     <tr className={`transition hover:bg-gray-50/60 ${confirmDelete ? 'bg-red-50/60' : ''}`}>
@@ -226,17 +228,37 @@ function UserRow({
         {formatDate(user.createdAt)}
       </td>
 
-      {/* Role select — ADMIN rows are read-only */}
+      {/* Role change — ADMIN rows are read-only; others require a two-click confirm */}
       <td className="px-4 py-3">
         {isAdmin ? (
           <span className="text-xs text-gray-300">—</span>
+        ) : pendingRole ? (
+          // Confirmation strip: shows the proposed change and waits for a second click
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-600">
+              Set to{' '}
+              <strong>{pendingRole.charAt(0) + pendingRole.slice(1).toLowerCase()}</strong>?
+            </span>
+            <button
+              onClick={() => { onRoleChange(user.id, pendingRole); setPendingRole(null) }}
+              disabled={isUpdating}
+              className="rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-indigo-700 disabled:opacity-60"
+            >
+              {isUpdating ? 'Saving…' : 'Confirm'}
+            </button>
+            <button
+              onClick={() => setPendingRole(null)}
+              className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-600 transition hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
         ) : (
+          // Normal state: selecting a new role stages it for confirmation
           <div className="flex items-center gap-2">
             <select
               value={user.role}
-              onChange={(e) =>
-                onRoleChange(user.id, e.target.value as 'MEMBER' | 'MANAGER')
-              }
+              onChange={(e) => setPendingRole(e.target.value as 'MEMBER' | 'MANAGER')}
               disabled={isUpdating}
               className="rounded-lg border border-gray-300 px-2.5 py-1 text-sm text-gray-700 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-50"
             >

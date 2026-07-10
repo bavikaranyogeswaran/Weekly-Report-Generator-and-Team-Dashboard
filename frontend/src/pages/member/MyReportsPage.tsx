@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import axios from 'axios'
 import { getReports, submitReport, deleteReport } from '@/api/reports'
 import ProjectBadge from '@/components/ProjectBadge'
 import type { Report } from '@/lib/types'
@@ -86,41 +88,51 @@ function ReportCard({ report, isSubmitting, isDeleting, onSubmit, onDelete }: Re
             {report.status}
           </span>
 
-          {report.status === 'DRAFT' && (
-            <div className="flex items-center gap-3">
-              {/* Submit — transitions DRAFT → SUBMITTED */}
-              <button
-                onClick={() => onSubmit(report.id)}
-                disabled={isSubmitting || isDeleting}
-                className="flex items-center gap-1 text-xs font-medium text-green-600 hover:underline disabled:opacity-50"
-              >
-                {isSubmitting && (
-                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                )}
-                Submit
-              </button>
+          <div className="flex items-center gap-3">
+            {/* View — always visible so members can re-read submitted reports */}
+            <Link
+              to={`/reports/${report.id}`}
+              className="text-xs font-medium text-gray-500 hover:underline"
+            >
+              View
+            </Link>
 
-              {/* Edit — navigates to edit page */}
-              <Link
-                to={`/reports/${report.id}/edit`}
-                className="text-xs font-medium text-indigo-600 hover:underline"
-              >
-                Edit
-              </Link>
+            {report.status === 'DRAFT' && (
+              <>
+                {/* Submit — transitions DRAFT → SUBMITTED */}
+                <button
+                  onClick={() => onSubmit(report.id)}
+                  disabled={isSubmitting || isDeleting}
+                  className="flex items-center gap-1 text-xs font-medium text-green-600 hover:underline disabled:opacity-50"
+                >
+                  {isSubmitting && (
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  )}
+                  Submit
+                </button>
 
-              {/* Delete — asks for confirmation first */}
-              <button
-                onClick={handleDelete}
-                disabled={isSubmitting || isDeleting}
-                className="flex items-center gap-1 text-xs font-medium text-red-500 hover:underline disabled:opacity-50"
-              >
-                {isDeleting && (
-                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                )}
-                Delete
-              </button>
-            </div>
-          )}
+                {/* Edit — navigates to edit page */}
+                <Link
+                  to={`/reports/${report.id}/edit`}
+                  className="text-xs font-medium text-indigo-600 hover:underline"
+                >
+                  Edit
+                </Link>
+
+                {/* Delete — asks for confirmation first */}
+                <button
+                  onClick={handleDelete}
+                  disabled={isSubmitting || isDeleting}
+                  className="flex items-center gap-1 text-xs font-medium text-red-500 hover:underline disabled:opacity-50"
+                >
+                  {isDeleting && (
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  )}
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
       </div>
@@ -131,6 +143,7 @@ function ReportCard({ report, isSubmitting, isDeleting, onSubmit, onDelete }: Re
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function MyReportsPage() {
   const queryClient = useQueryClient()
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const { data: reports, isLoading, isError } = useQuery({
     queryKey: ['reports'],
@@ -140,13 +153,27 @@ export default function MyReportsPage() {
   // Submit mutation — refreshes the list so the badge updates immediately
   const submitMutation = useMutation({
     mutationFn: (id: string) => submitReport(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reports'] }),
+    onSuccess: () => {
+      setActionError(null)
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+    },
+    onError: (err: unknown) => {
+      const msg = axios.isAxiosError(err) ? err.response?.data?.message : null
+      setActionError(msg ?? 'Failed to submit report. Please try again.')
+    },
   })
 
   // Delete mutation — refreshes the list so the card disappears immediately
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteReport(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reports'] }),
+    onSuccess: () => {
+      setActionError(null)
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+    },
+    onError: (err: unknown) => {
+      const msg = axios.isAxiosError(err) ? err.response?.data?.message : null
+      setActionError(msg ?? 'Failed to delete report. Please try again.')
+    },
   })
 
   return (
@@ -168,10 +195,17 @@ export default function MyReportsPage() {
       {/* Loading */}
       {isLoading && <ReportSkeleton />}
 
-      {/* Error */}
+      {/* Fetch error */}
       {isError && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           Failed to load reports. Please refresh the page.
+        </div>
+      )}
+
+      {/* Submit / delete action error */}
+      {actionError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}
         </div>
       )}
 

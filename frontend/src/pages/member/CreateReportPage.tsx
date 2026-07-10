@@ -27,8 +27,8 @@ export default function CreateReportPage() {
       queryClient.invalidateQueries({ queryKey: ['reports'] })
       navigate('/reports')
     },
-    onError: () => {
-      setServerError('Failed to create report. Please try again.')
+    onError: (err: any) => {
+      setServerError(err?.response?.data?.message ?? 'Failed to create report. Please try again.')
     },
   })
 

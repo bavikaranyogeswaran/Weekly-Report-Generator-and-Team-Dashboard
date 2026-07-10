@@ -15,6 +15,7 @@ import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
 import MyReportsPage from '@/pages/member/MyReportsPage'
 import CreateReportPage from '@/pages/member/CreateReportPage'
 import EditReportPage from '@/pages/member/EditReportPage'
+import ViewReportPage from '@/pages/member/ViewReportPage'
 
 // Manager pages
 import DashboardPage from '@/pages/manager/DashboardPage'
@@ -57,6 +58,7 @@ export default function App() {
             {/* Member routes — accessible to all logged-in roles */}
             <Route path="/reports" element={<MyReportsPage />} />
             <Route path="/reports/new" element={<CreateReportPage />} />
+            <Route path="/reports/:id" element={<ViewReportPage />} />
             <Route path="/reports/:id/edit" element={<EditReportPage />} />
             <Route path="/settings" element={<SettingsPage />} />
 

@@ -6,6 +6,7 @@ import { User } from '../users/entities/user.entity';
 import { Project } from '../projects/entities/project.entity';
 import { Report } from '../reports/entities/report.entity';
 import { ReportStatus } from '../common/enums/report-status.enum';
+import { Role } from '../common/enums/role.enum';
 
 @Injectable()
 export class DashboardService {
@@ -27,8 +28,10 @@ export class DashboardService {
   async getSummary() {
     const weekStart = this.getCurrentWeekMonday();
 
-    const [totalUsers, totalProjects, submittedThisWeek, openBlockers] = await Promise.all([
-      this.usersRepo.count(),
+    const [totalUsers, memberCount, totalProjects, submittedThisWeek, openBlockers] = await Promise.all([
+      this.usersRepo.count(), // all roles — for the "total users" stat tile
+      // Only MEMBERs are expected to submit reports — used as the submission rate denominator
+      this.usersRepo.count({ where: { role: Role.MEMBER } }),
       this.projectsRepo.count(),
       this.reportsRepo.count({
         where: { weekStart, status: ReportStatus.SUBMITTED },
@@ -42,9 +45,9 @@ export class DashboardService {
         .getCount(),
     ]);
 
-    // Percentage of members who submitted a report this week (0 if no users yet)
+    // Rate = submitted ÷ members only (ADMIN/MANAGER are not expected to submit)
     const submissionRate =
-      totalUsers > 0 ? Math.round((submittedThisWeek / totalUsers) * 100) : 0;
+      memberCount > 0 ? Math.round((submittedThisWeek / memberCount) * 100) : 0;
 
     return {
       totalUsers,

@@ -106,7 +106,12 @@ export default function WorkloadChart() {
 
       {!isLoading && !isError && data?.length === 0 && (
         <p className="py-6 text-center text-sm text-gray-400">
-          No submitted reports with hours logged yet.
+          {/* The Project view is empty whenever no reports are tagged to a project —
+              even if members logged hours. Say so plainly and point to the User view,
+              otherwise the copy reads as "nobody logged any hours" which is misleading. */}
+          {groupBy === 'project'
+            ? 'No hours logged against a project yet — switch to User to see hours by person.'
+            : 'No submitted reports with hours logged yet.'}
         </p>
       )}
 

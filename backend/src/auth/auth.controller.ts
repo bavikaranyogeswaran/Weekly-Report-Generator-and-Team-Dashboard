@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -22,9 +23,10 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // POST /api/auth/login — returns a JWT access token on valid credentials
+  // POST /api/auth/login — 5 attempts/min per IP to block brute-force attacks
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
@@ -36,14 +38,15 @@ export class AuthController {
     return this.authService.verifyEmail(token);
   }
 
-  // GET /api/auth/me — returns the logged-in user's profile
+  // GET /api/auth/me — called on every page load; skip throttle so the default 60/min doesn't interfere
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @SkipThrottle()
   getMe(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.getMe(user.userId);
   }
 
-  // PATCH /api/auth/password — logged-in user changes their own password (requires current password)
+  // PATCH /api/auth/password — requires a valid JWT; default 60/min limit is sufficient
   @Patch('password')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -54,16 +57,18 @@ export class AuthController {
     return this.authService.changePassword(user.userId, dto);
   }
 
-  // POST /api/auth/forgot-password — public; sends reset link to the given email if it exists
+  // POST /api/auth/forgot-password — 5 req/min to prevent email-flood attacks
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
   }
 
-  // POST /api/auth/reset-password — public; sets a new password using a valid, non-expired token
+  // POST /api/auth/reset-password — 5 req/min; each attempt burns a one-time token anyway
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }

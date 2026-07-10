@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { envValidationSchema } from './config/env.validation';
@@ -28,6 +30,10 @@ import { AdminModule } from './admin/admin.module';
       useFactory: databaseConfig,
     }),
 
+    // Global rate limiter — default 60 req/min per IP.
+    // Sensitive auth endpoints override this with a stricter 5 req/min limit.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
+
     AuthModule,
     UsersModule,
     ProjectsModule,
@@ -37,6 +43,10 @@ import { AdminModule } from './admin/admin.module';
     AdminModule, // seeds the ADMIN account from env vars on startup
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Apply ThrottlerGuard to every route in the application
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

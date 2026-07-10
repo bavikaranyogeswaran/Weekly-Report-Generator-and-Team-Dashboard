@@ -1,13 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { CronJob } from 'cron';
 import { LessThan, Repository } from 'typeorm';
 import { Report } from '../reports/entities/report.entity';
 import { ReportStatus } from '../common/enums/report-status.enum';
 import { DateUtilsService } from '../common/date-utils.service';
 
 @Injectable()
-export class TasksService {
+export class TasksService implements OnModuleInit {
   private readonly logger = new Logger(TasksService.name);
 
   constructor(
@@ -15,11 +17,42 @@ export class TasksService {
     private readonly reportsRepo: Repository<Report>,
 
     private readonly dateUtils: DateUtilsService,
+
+    // Read APP_TIMEZONE so the job's trigger time follows the team's timezone
+    private readonly config: ConfigService,
+
+    // Lets us register the cron job at runtime with a timezone from config.
+    // The static @Cron decorator can't do this — its options are fixed at class-load,
+    // which forced a hardcoded timezone here before.
+    private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
 
-  // Runs every Monday at 09:00 in the app timezone (default Asia/Colombo).
+  // Register the weekly "mark overdue reports LATE" job on startup.
+  // Fires every Monday at 09:00 in APP_TIMEZONE (never hardcoded).
+  onModuleInit(): void {
+    const tz = this.config.get<string>('APP_TIMEZONE') ?? 'Asia/Colombo';
+
+    const job = CronJob.from({
+      cronTime: '0 9 * * 1', // every Monday at 09:00
+      timeZone: tz,
+      onTick: () => {
+        // CronJob expects a sync tick — kick off the async work and log any failure
+        this.markLateReports().catch((err) =>
+          this.logger.error(
+            'markLateReports failed',
+            err instanceof Error ? err.stack : String(err),
+          ),
+        );
+      },
+    });
+
+    this.schedulerRegistry.addCronJob('markLateReports', job);
+    job.start();
+
+    this.logger.log(`Scheduled markLateReports for Mondays 09:00 (${tz})`);
+  }
+
   // Any DRAFT report from a week that has already ended is marked LATE.
-  @Cron('0 9 * * 1', { timeZone: 'Asia/Colombo' })
   async markLateReports(): Promise<void> {
     const thisMonday = this.dateUtils.getCurrentWeekMonday();
 

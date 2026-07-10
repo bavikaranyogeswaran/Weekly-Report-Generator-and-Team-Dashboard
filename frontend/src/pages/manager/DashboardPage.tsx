@@ -64,7 +64,8 @@ function SummaryRow() {
       <StatCard
         label="Submitted this week"
         value={data.submittedThisWeek}
-        sublabel={`of ${data.totalUsers} members`}
+        // Denominator matches submissionRate (member-role users only), not all users
+        sublabel={`of ${data.memberCount} members`}
         accent="green"
       />
       <StatCard

@@ -73,9 +73,10 @@ export type Project = {
 
 // ── Dashboard types (manager only) ──────────────────────────────────────────
 
-// GET /dashboard/summary — five headline numbers for the top stat tiles
+// GET /dashboard/summary — headline numbers for the top stat tiles
 export type DashboardSummary = {
   totalUsers: number
+  memberCount: number     // MEMBER-role users — the denominator behind submittedThisWeek/submissionRate
   totalProjects: number
   submittedThisWeek: number
   submissionRate: number  // 0–100 percentage

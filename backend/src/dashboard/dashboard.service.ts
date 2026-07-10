@@ -54,6 +54,7 @@ export class DashboardService {
 
     return {
       totalUsers,
+      memberCount,    // MEMBER-role users — the denominator behind submittedThisWeek/submissionRate
       totalProjects,
       submittedThisWeek,
       submissionRate, // 0–100 percentage

@@ -5,10 +5,10 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 
-// All dashboard endpoints are manager-only — members have no access
+// Dashboard is restricted to MANAGER and ADMIN — members have no access
 @Controller('dashboard')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.MANAGER)
+@Roles(Role.MANAGER, Role.ADMIN)
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 

@@ -6,10 +6,10 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 
-// All AI endpoints are manager-only — members do not have access to team-wide insights
+// AI chat is restricted to MANAGER and ADMIN — members do not have access to team-wide insights
 @Controller('ai')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.MANAGER)
+@Roles(Role.MANAGER, Role.ADMIN)
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 

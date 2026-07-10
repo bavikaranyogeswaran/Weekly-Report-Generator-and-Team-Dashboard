@@ -160,6 +160,10 @@ export class AuthService {
     // Clear the token so it cannot be reused
     user.passwordResetToken = null;
     user.passwordResetExpiry = null;
+    // This endpoint is also reused for the admin-invite flow — the user has now set their
+    // own password, so the temporary one is gone. No-op for the plain forgot-password case,
+    // where the flag was already false.
+    user.mustChangePassword = false;
     await this.usersRepo.save(user);
 
     return { message: 'Password reset successfully. You can now log in with your new password.' };

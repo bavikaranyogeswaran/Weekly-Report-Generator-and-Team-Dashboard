@@ -54,17 +54,23 @@ export class EmailService {
     });
   }
 
-  // Sends login credentials to a user whose account was created by the admin.
-  // If SMTP is not configured, prints the credentials to the console instead.
-  async sendWelcomeEmail(
+  // Sends an invite link to a user whose account was created by the admin.
+  // The link points to the existing reset-password page — the user sets their own
+  // password there. No plain-text password is ever sent via email.
+  // If SMTP is not configured, prints the link to the console (dev convenience).
+  async sendInviteEmail(
     to: string,
     name: string,
     role: Role,
-    temporaryPassword: string,
+    token: string,
   ): Promise<void> {
+    const frontendUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+    // Reuse the existing /reset-password page — it already handles setting a new password
+    const inviteUrl = `${frontendUrl}/reset-password?token=${token}`;
+
     if (!this.transporter) {
       console.log(
-        `\n[Email] No SMTP configured. Welcome credentials for ${to}:\n  Password: ${temporaryPassword}\n`,
+        `\n[Email] No SMTP configured. Invite link for ${to}:\n  ${inviteUrl}\n`,
       );
       return;
     }
@@ -74,8 +80,8 @@ export class EmailService {
     await this.transporter.sendMail({
       from: `"Weekly Reports" <${from}>`,
       to,
-      subject: 'Your Weekly Reports account is ready',
-      html: this.buildWelcomeHtml(name, to, role, temporaryPassword),
+      subject: 'You have been invited to Weekly Reports',
+      html: this.buildInviteHtml(name, role, inviteUrl),
     });
   }
 
@@ -151,15 +157,9 @@ export class EmailService {
     `;
   }
 
-  // HTML template for the admin-created welcome email
-  private buildWelcomeHtml(
-    name: string,
-    email: string,
-    role: Role,
-    temporaryPassword: string,
-  ): string {
-    // FRONTEND_URL points at the React app — the sign-in link should go there, not the API
-    const appUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+  // HTML template for the admin-created invite email.
+  // No password is included — the user clicks the button to set their own.
+  private buildInviteHtml(name: string, role: Role, inviteUrl: string): string {
     const roleLabel = role === Role.MANAGER ? 'Manager' : 'Member';
 
     return `
@@ -169,20 +169,22 @@ export class EmailService {
           <div style="max-width: 520px; margin: 0 auto; background: white; border-radius: 10px; padding: 32px;">
             <h2 style="color: #4f46e5; margin-top: 0;">Weekly Report Generator</h2>
             <p>Hi <strong>${name}</strong>,</p>
-            <p>Your account has been created by an administrator. You have been assigned the role of <strong>${roleLabel}</strong>.</p>
-            <div style="background: #f8f7ff; border: 1px solid #e0e7ff; border-radius: 8px; padding: 16px; margin: 20px 0;">
-              <p style="margin: 0 0 8px; font-size: 13px; color: #555;">Your login credentials:</p>
-              <p style="margin: 4px 0; font-size: 14px;"><strong>Email:</strong> ${email}</p>
-              <p style="margin: 4px 0; font-size: 14px;"><strong>Password:</strong> ${temporaryPassword}</p>
-            </div>
-            <a href="${appUrl}/login"
+            <p>
+              An administrator has created an account for you with the role of
+              <strong>${roleLabel}</strong>.
+              Click the button below to set your password and start using the app.
+            </p>
+            <a href="${inviteUrl}"
                style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px;
-                      border-radius: 6px; text-decoration: none; font-weight: bold; margin: 8px 0;">
-              Sign in
+                      border-radius: 6px; text-decoration: none; font-weight: bold; margin: 16px 0;">
+              Set your password
             </a>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-            <p style="color: #999; font-size: 12px; margin: 0;">
-              Please keep your credentials safe. Contact your administrator if you need a password reset.
+            <p style="color: #555; font-size: 13px; margin-top: 24px;">
+              This invite link expires in 7 days. If you did not expect this email, you can safely ignore it.
+            </p>
+            <p style="color: #555; font-size: 13px;">
+              Or paste this URL into your browser:<br/>
+              <a href="${inviteUrl}" style="color: #4f46e5; word-break: break-all;">${inviteUrl}</a>
             </p>
           </div>
         </body>

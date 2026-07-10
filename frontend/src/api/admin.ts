@@ -13,10 +13,9 @@ export const patchUserRole = (userId: string, role: 'MEMBER' | 'MANAGER') =>
 export const deleteAdminUser = (userId: string) =>
   api.delete<{ message: string }>(`/admin/users/${userId}`)
 
-// POST /admin/users — admin creates a new user with a chosen role; sends welcome email
+// POST /admin/users — admin creates a new user with a chosen role; sends invite email
 export const createAdminUser = (dto: {
   name: string
   email: string
-  password: string
   role: 'MEMBER' | 'MANAGER'
 }) => api.post<AuthUser>('/admin/users', dto)

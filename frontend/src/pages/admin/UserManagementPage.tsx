@@ -34,8 +34,8 @@ function formatDate(iso: string): string {
 
 // ── Create user form ──────────────────────────────────────────────────────────
 
-type CreateForm = { name: string; email: string; password: string; role: 'MEMBER' | 'MANAGER' }
-const EMPTY_CREATE: CreateForm = { name: '', email: '', password: '', role: 'MEMBER' }
+type CreateForm = { name: string; email: string; role: 'MEMBER' | 'MANAGER' }
+const EMPTY_CREATE: CreateForm = { name: '', email: '', role: 'MEMBER' }
 
 function CreateUserForm({ onDone }: { onDone: () => void }) {
   const queryClient = useQueryClient()
@@ -55,9 +55,8 @@ function CreateUserForm({ onDone }: { onDone: () => void }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.name.trim())  { setError('Name is required.');              return }
-    if (!form.email.trim()) { setError('Email is required.');             return }
-    if (form.password.length < 8) { setError('Password must be at least 8 characters.'); return }
+    if (!form.name.trim())  { setError('Name is required.');  return }
+    if (!form.email.trim()) { setError('Email is required.'); return }
     setError(null)
     mutation.mutate()
   }
@@ -76,7 +75,7 @@ function CreateUserForm({ onDone }: { onDone: () => void }) {
     >
       <p className="mb-3 text-sm font-semibold text-gray-700">New user</p>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-500">Full name</label>
           <input
@@ -95,17 +94,6 @@ function CreateUserForm({ onDone }: { onDone: () => void }) {
             placeholder="jane@example.com"
             value={form.email}
             onChange={(e) => field('email', e.target.value)}
-            className={inputCls}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500">Initial password</label>
-          <input
-            type="password"
-            placeholder="Min. 8 characters"
-            value={form.password}
-            onChange={(e) => field('password', e.target.value)}
             className={inputCls}
           />
         </div>
@@ -131,7 +119,7 @@ function CreateUserForm({ onDone }: { onDone: () => void }) {
           disabled={mutation.isPending}
           className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:opacity-60"
         >
-          {mutation.isPending ? 'Creating…' : 'Create user'}
+          {mutation.isPending ? 'Sending invite…' : 'Create & invite'}
         </button>
         <button
           type="button"
@@ -142,9 +130,10 @@ function CreateUserForm({ onDone }: { onDone: () => void }) {
         </button>
       </div>
 
-      {/* Note that credentials will be emailed */}
+      {/* Password is not set by admin — user chooses their own via the invite link */}
       <p className="mt-2 text-xs text-gray-400">
-        Login credentials will be sent to the user's email address.
+        An invitation email with a link to set their password will be sent to the user.
+        The link expires in 7 days.
       </p>
     </form>
   )

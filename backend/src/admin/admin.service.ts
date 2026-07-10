@@ -8,11 +8,15 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { User } from '../users/entities/user.entity';
 import { Role } from '../common/enums/role.enum';
 import { EmailService } from '../email/email.service';
 import { AssignRoleDto } from './dto/assign-role.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+
+// Invite links expire after 7 days — longer than the 1-hour forgot-password window
+const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1_000;
 
 @Injectable()
 export class AdminService {
@@ -26,32 +30,41 @@ export class AdminService {
 
   // Creates a new user with a chosen role. Admin-created accounts are marked
   // isVerified immediately — no email verification step is required.
+  // The user sets their own password via a 7-day invite link instead of receiving
+  // a plain-text password in email.
   async createUser(dto: CreateUserDto) {
     const existing = await this.usersRepo.findOne({ where: { email: dto.email } });
     if (existing) {
       throw new ConflictException('A user with this email already exists');
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, 10);
+    // Lock the account with a random hash the user will never know — they must use
+    // the invite link to set their own password before they can sign in.
+    const lockedHash = await bcrypt.hash(randomBytes(32).toString('hex'), 10);
+
+    const inviteToken = randomBytes(32).toString('hex');
+    const inviteExpiry = new Date(Date.now() + INVITE_EXPIRY_MS);
 
     const user = this.usersRepo.create({
       name: dto.name,
       email: dto.email,
-      passwordHash,
+      passwordHash: lockedHash,
       role: dto.role as Role,
       isVerified: true, // admin-created accounts skip email verification
+      passwordResetToken: inviteToken,
+      passwordResetExpiry: inviteExpiry,
     });
 
     const saved = await this.usersRepo.save(user);
 
-    // Send credentials email after saving — if it fails, remove the user so the admin
+    // Send invite email after saving — if it fails, remove the user so the admin
     // can retry without hitting a ConflictException on the same email address.
     try {
-      await this.emailService.sendWelcomeEmail(saved.email, saved.name, saved.role, dto.password);
+      await this.emailService.sendInviteEmail(saved.email, saved.name, saved.role, inviteToken);
     } catch {
       await this.usersRepo.remove(saved);
       throw new InternalServerErrorException(
-        'Welcome email failed to send. The account was not created. Please try again.',
+        'Invite email failed to send. The account was not created. Please try again.',
       );
     }
 

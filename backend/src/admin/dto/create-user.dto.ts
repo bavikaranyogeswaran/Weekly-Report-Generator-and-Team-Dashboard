@@ -1,17 +1,13 @@
-import { IsEmail, IsIn, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsString } from 'class-validator';
 
-// Payload for POST /admin/users — admin creates an account with a chosen role
+// Payload for POST /admin/users — admin creates an account with a chosen role.
+// No password field: the user sets their own via the invite link sent to their email.
 export class CreateUserDto {
   @IsString()
   name: string;
 
   @IsEmail()
   email: string;
-
-  // Initial password set by the admin — sent to the user via welcome email
-  @IsString()
-  @MinLength(8)
-  password: string;
 
   // Only MEMBER or MANAGER can be assigned; ADMIN is reserved for the seeded account
   @IsIn(['MEMBER', 'MANAGER'])

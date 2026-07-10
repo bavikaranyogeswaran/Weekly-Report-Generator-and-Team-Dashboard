@@ -50,7 +50,8 @@ export class UsersController {
   updateRole(
     @Param('id') id: string,
     @Body() dto: UpdateRoleDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.usersService.updateRole(id, dto);
+    return this.usersService.updateRole(id, dto, currentUser.userId);
   }
 }

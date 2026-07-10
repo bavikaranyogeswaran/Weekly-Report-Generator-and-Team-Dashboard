@@ -1,8 +1,9 @@
-import { IsEnum } from 'class-validator';
-import { Role } from '../../common/enums/role.enum';
+import { IsIn } from 'class-validator';
 
-// Body accepted by PATCH /users/:id/role — only a valid Role enum value is allowed
+// Body accepted by PATCH /users/:id/role.
+// Deliberately excludes ADMIN — @IsEnum(Role) used to accept "ADMIN", which let a
+// manager grant themselves or anyone else the admin role. Only MEMBER/MANAGER are valid here.
 export class UpdateRoleDto {
-  @IsEnum(Role, { message: 'role must be MEMBER or MANAGER' })
-  role: Role;
+  @IsIn(['MEMBER', 'MANAGER'], { message: 'role must be MEMBER or MANAGER' })
+  role: 'MEMBER' | 'MANAGER';
 }

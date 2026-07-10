@@ -24,15 +24,23 @@ describe('JwtStrategy.validate', () => {
 
   it('uses the current DB role and ignores the token role claim', async () => {
     // Token claims ADMIN, but the DB says this user is only a MEMBER now
-    usersRepo.findOne.mockResolvedValue({ id: 'u1', role: Role.MEMBER });
+    usersRepo.findOne.mockResolvedValue({
+      id: 'u1',
+      role: Role.MEMBER,
+      mustChangePassword: false,
+    });
 
     const result = await strategy.validate({ sub: 'u1', role: Role.ADMIN });
 
-    expect(result).toEqual({ userId: 'u1', role: Role.MEMBER });
+    expect(result).toEqual({ userId: 'u1', role: Role.MEMBER, mustChangePassword: false });
   });
 
   it('looks the user up by the token subject', async () => {
-    usersRepo.findOne.mockResolvedValue({ id: 'u1', role: Role.MANAGER });
+    usersRepo.findOne.mockResolvedValue({
+      id: 'u1',
+      role: Role.MANAGER,
+      mustChangePassword: false,
+    });
 
     await strategy.validate({ sub: 'u1', role: Role.MANAGER });
 

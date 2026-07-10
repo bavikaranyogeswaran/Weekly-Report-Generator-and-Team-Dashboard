@@ -18,6 +18,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { AuthenticatedUser } from './interfaces/authenticated-user.interface';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { AllowPasswordChangePending } from '../common/decorators/allow-password-change-pending.decorator';
 
 @Controller('auth') // all routes here are prefixed with /api/auth
 export class AuthController {
@@ -38,17 +39,21 @@ export class AuthController {
     return this.authService.verifyEmail(token);
   }
 
-  // GET /api/auth/me — called on every page load; skip throttle so the default 60/min doesn't interfere
+  // GET /api/auth/me — called on every page load; skip throttle so the default 60/min doesn't interfere.
+  // Allowed while a password change is pending so the frontend can load the profile and redirect.
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @AllowPasswordChangePending()
   @SkipThrottle()
   getMe(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.getMe(user.userId);
   }
 
-  // PATCH /api/auth/password — requires a valid JWT; default 60/min limit is sufficient
+  // PATCH /api/auth/password — requires a valid JWT; default 60/min limit is sufficient.
+  // Allowed while a password change is pending — this is the endpoint that clears the flag.
   @Patch('password')
   @UseGuards(JwtAuthGuard)
+  @AllowPasswordChangePending()
   @HttpCode(HttpStatus.OK)
   changePassword(
     @CurrentUser() user: AuthenticatedUser,

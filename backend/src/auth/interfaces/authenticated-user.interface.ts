@@ -5,4 +5,7 @@ import { Role } from '../../common/enums/role.enum';
 export interface AuthenticatedUser {
   userId: string; // the user's UUID from the token payload
   role: Role;     // MEMBER, MANAGER, or ADMIN
+  // True while an admin-invited user still has a temporary password — JwtAuthGuard
+  // blocks all but the change-password/profile routes until they clear it.
+  mustChangePassword: boolean;
 }

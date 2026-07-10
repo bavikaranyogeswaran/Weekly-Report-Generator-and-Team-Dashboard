@@ -37,10 +37,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   //    role baked into a token that may live for days)
   //  - a deleted user's token stops working at once (no matching row -> 401)
   async validate(payload: JwtPayload) {
-    // Only the two fields guards need — keeps the per-request lookup cheap
+    // Only the fields guards need — keeps the per-request lookup cheap
     const user = await this.usersRepo.findOne({
       where: { id: payload.sub },
-      select: { id: true, role: true },
+      select: { id: true, role: true, mustChangePassword: true },
     });
 
     // Token is valid but the account no longer exists — reject it
@@ -51,6 +51,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       userId: user.id,
       role: user.role, // CURRENT role from the DB, never the (possibly stale) token claim
+      // Surfaced so JwtAuthGuard can block app access until the temp password is changed
+      mustChangePassword: user.mustChangePassword,
     };
   }
 }

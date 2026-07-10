@@ -1,9 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Security headers: X-Frame-Options, X-Content-Type-Options, HSTS, etc.
+  app.use(helmet());
 
   // Allow the React frontend to call this API — reads FRONTEND_URL so production deployments
   // don't need a code change, only an env var update

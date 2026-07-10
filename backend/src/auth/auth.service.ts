@@ -7,7 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import { User } from '../users/entities/user.entity';
 import { EmailService } from '../email/email.service';
 import { LoginDto } from './dto/login.dto';
@@ -18,6 +18,13 @@ import { JwtPayload } from './interfaces/jwt-payload.interface';
 
 // Number of bcrypt hashing rounds — higher = more secure but slower
 const BCRYPT_ROUNDS = 10;
+
+// SHA-256 hash of a token before storing it in the DB.
+// The raw token is only ever sent to the user via email — the DB never holds the raw value,
+// so a DB leak cannot be used to immediately consume outstanding tokens.
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
 
 // Generic message returned for both found and not-found emails — prevents email enumeration
 const FORGOT_PASSWORD_RESPONSE =
@@ -56,11 +63,12 @@ export class AuthService {
       throw new BadRequestException('Verification token is required');
     }
 
-    // verificationToken has select:false — must re-include it via QueryBuilder
+    // verificationToken has select:false — must re-include it via QueryBuilder.
+    // Compare against the SHA-256 hash stored in the DB, not the raw token.
     const user = await this.usersRepo
       .createQueryBuilder('user')
       .addSelect('user.verificationToken')
-      .where('user.verificationToken = :token', { token })
+      .where('user.verificationToken = :hash', { hash: hashToken(token) })
       .getOne();
 
     if (!user) {
@@ -116,26 +124,28 @@ export class AuthService {
       return { message: FORGOT_PASSWORD_RESPONSE };
     }
 
-    // 32 random bytes gives a 256-bit token — safe against brute-force guessing
+    // 32 random bytes gives a 256-bit token — safe against brute-force guessing.
+    // Store the SHA-256 hash so a DB leak does not expose usable tokens.
     const token = randomBytes(32).toString('hex');
     const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
 
-    user.passwordResetToken = token;
+    user.passwordResetToken = hashToken(token); // hash goes to DB
     user.passwordResetExpiry = expiry;
     await this.usersRepo.save(user);
 
-    await this.emailService.sendPasswordResetEmail(user.email, user.name, token);
+    await this.emailService.sendPasswordResetEmail(user.email, user.name, token); // raw token goes to email
 
     return { message: FORGOT_PASSWORD_RESPONSE };
   }
 
   // Validates the reset token and sets the new password if the token is still valid
   async resetPassword(dto: ResetPasswordDto) {
-    // passwordResetToken has select:false — must re-include it via QueryBuilder
+    // passwordResetToken has select:false — must re-include it via QueryBuilder.
+    // The DB stores the SHA-256 hash, so we hash the incoming token before comparing.
     const user = await this.usersRepo
       .createQueryBuilder('user')
       .addSelect('user.passwordResetToken')
-      .where('user.passwordResetToken = :token', { token: dto.token })
+      .where('user.passwordResetToken = :hash', { hash: hashToken(dto.token) })
       .andWhere('user.passwordResetExpiry > :now', { now: new Date() })
       .getOne();
 

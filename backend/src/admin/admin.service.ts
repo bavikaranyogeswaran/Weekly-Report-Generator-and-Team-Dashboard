@@ -8,7 +8,12 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
+
+// SHA-256 hash stored in DB so a DB leak cannot be used to consume outstanding tokens
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
 import { User } from '../users/entities/user.entity';
 import { Role } from '../common/enums/role.enum';
 import { EmailService } from '../email/email.service';
@@ -42,7 +47,7 @@ export class AdminService {
     // the invite link to set their own password before they can sign in.
     const lockedHash = await bcrypt.hash(randomBytes(32).toString('hex'), 10);
 
-    const inviteToken = randomBytes(32).toString('hex');
+    const inviteToken = randomBytes(32).toString('hex'); // raw token — emailed to user
     const inviteExpiry = new Date(Date.now() + INVITE_EXPIRY_MS);
 
     const user = this.usersRepo.create({
@@ -51,7 +56,7 @@ export class AdminService {
       passwordHash: lockedHash,
       role: dto.role as Role,
       isVerified: true, // admin-created accounts skip email verification
-      passwordResetToken: inviteToken,
+      passwordResetToken: hashToken(inviteToken), // SHA-256 hash stored in DB
       passwordResetExpiry: inviteExpiry,
     });
 
@@ -60,7 +65,7 @@ export class AdminService {
     // Send invite email after saving — if it fails, remove the user so the admin
     // can retry without hitting a ConflictException on the same email address.
     try {
-      await this.emailService.sendInviteEmail(saved.email, saved.name, saved.role, inviteToken);
+      await this.emailService.sendInviteEmail(saved.email, saved.name, saved.role, inviteToken); // raw token in email
     } catch {
       await this.usersRepo.remove(saved);
       throw new InternalServerErrorException(

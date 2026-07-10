@@ -82,7 +82,8 @@ export class AuthService {
     return { message: 'Email verified successfully. You can now log in.' };
   }
 
-  // Returns the full profile of the currently logged-in user (without the password hash)
+  // Returns the full profile of the currently logged-in user.
+  // passwordHash is stripped automatically by ClassSerializerInterceptor via @Exclude().
   async getMe(userId: string) {
     const user = await this.usersRepo.findOne({ where: { id: userId } });
 
@@ -90,8 +91,7 @@ export class AuthService {
       throw new UnauthorizedException('User account no longer exists');
     }
 
-    const { passwordHash: _removed, ...safeUser } = user;
-    return safeUser;
+    return user;
   }
 
   // Allows a logged-in user to update their own password by supplying the current one
@@ -109,6 +109,8 @@ export class AuthService {
     }
 
     user.passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
+    // Clear the flag set by admin-created accounts — user has now set their own password
+    user.mustChangePassword = false;
     await this.usersRepo.save(user);
 
     return { message: 'Password changed successfully' };

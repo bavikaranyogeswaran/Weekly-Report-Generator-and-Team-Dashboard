@@ -1,5 +1,5 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
@@ -16,6 +16,10 @@ async function bootstrap() {
     origin: frontendUrl,
     credentials: true,
   });
+
+  // Serialize responses through class-transformer — applies @Exclude() on User.passwordHash
+  // so sensitive fields are never returned in API responses, even on nested user objects.
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   // Automatically validate all incoming request bodies using class-validator decorators
   app.useGlobalPipes(

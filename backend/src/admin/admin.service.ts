@@ -56,6 +56,7 @@ export class AdminService {
       passwordHash: lockedHash,
       role: dto.role as Role,
       isVerified: true, // admin-created accounts skip email verification
+      mustChangePassword: true, // force the user to set their own password on first login
       passwordResetToken: hashToken(inviteToken), // SHA-256 hash stored in DB
       passwordResetExpiry: inviteExpiry,
     });
@@ -73,15 +74,13 @@ export class AdminService {
       );
     }
 
-    const { passwordHash: _pw, ...safe } = saved;
-    return safe;
+    // passwordHash excluded automatically by ClassSerializerInterceptor via @Exclude()
+    return saved;
   }
 
-  // Returns every user, newest first, with passwordHash stripped
+  // Returns every user, newest first — passwordHash excluded by ClassSerializerInterceptor
   async findAllUsers() {
-    const users = await this.usersRepo.find({ order: { createdAt: 'DESC' } });
-
-    return users.map(({ passwordHash: _pw, ...safe }) => safe);
+    return this.usersRepo.find({ order: { createdAt: 'DESC' } });
   }
 
   // Permanently deletes a user account.
@@ -137,7 +136,7 @@ export class AdminService {
       await this.emailService.sendRoleAssignedEmail(saved.email, saved.name, saved.role);
     }
 
-    const { passwordHash: _pw, ...safe } = saved;
-    return safe;
+    // passwordHash excluded automatically by ClassSerializerInterceptor via @Exclude()
+    return saved;
   }
 }

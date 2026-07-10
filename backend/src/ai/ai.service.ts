@@ -6,6 +6,7 @@ import Groq from 'groq-sdk';
 import { Report } from '../reports/entities/report.entity';
 import { User } from '../users/entities/user.entity';
 import { ReportStatus } from '../common/enums/report-status.enum';
+import { DateUtilsService } from '../common/date-utils.service';
 
 // 5-minute TTL for the team context cache — balances freshness against DB round trips
 const CONTEXT_CACHE_TTL_MS = 5 * 60 * 1_000;
@@ -26,6 +27,9 @@ export class AiService {
 
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
+
+    // Shared timezone-aware week-boundary calculator
+    private readonly dateUtils: DateUtilsService,
   ) {
     const apiKey = config.getOrThrow<string>('GROQ_API_KEY');
 
@@ -83,7 +87,7 @@ export class AiService {
       return this.contextCache.value;
     }
     const tz = this.config.get<string>('APP_TIMEZONE') ?? 'Asia/Colombo';
-    const weekMonday = this.getCurrentWeekMonday();
+    const weekMonday = this.dateUtils.getCurrentWeekMonday();
     const weekLabel = weekMonday.toLocaleDateString('en-CA', { timeZone: tz });
 
     // Run both queries in parallel for speed
@@ -143,14 +147,4 @@ export class AiService {
     return context;
   }
 
-  // Returns the Monday of the current week in the configured timezone
-  private getCurrentWeekMonday(): Date {
-    const tz = this.config.get<string>('APP_TIMEZONE') ?? 'Asia/Colombo';
-    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: tz });
-    const [year, month, day] = todayStr.split('-').map(Number);
-    const today = new Date(year, month - 1, day);
-    const dayOfWeek = today.getDay();
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    return new Date(year, month - 1, day + daysToMonday);
-  }
 }

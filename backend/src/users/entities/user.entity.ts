@@ -6,6 +6,7 @@ import {
   OneToMany,
   ManyToMany,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { Role } from '../../common/enums/role.enum';
 import { Report } from '../../reports/entities/report.entity';
 import { Project } from '../../projects/entities/project.entity';
@@ -23,7 +24,9 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  // Never store plain-text passwords — always store the bcrypt hash
+  // Never store plain-text passwords — always store the bcrypt hash.
+  // @Exclude strips this from all HTTP responses via ClassSerializerInterceptor.
+  @Exclude()
   @Column({ name: 'password_hash' })
   passwordHash: string;
 
@@ -34,6 +37,11 @@ export class User {
   // True once the user clicks the link in the verification email
   @Column({ name: 'is_verified', default: false })
   isVerified: boolean;
+
+  // Set to true for admin-created accounts so the user is forced to change their
+  // temporary invite password on first login. Cleared by changePassword().
+  @Column({ name: 'must_change_password', default: false })
+  mustChangePassword: boolean;
 
   // One-time token emailed on registration — cleared after the user verifies
   // type must be explicit because TypeORM can't infer the SQL type from `string | null`

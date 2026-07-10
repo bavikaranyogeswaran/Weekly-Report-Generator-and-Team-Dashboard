@@ -17,6 +17,7 @@ function formatDate(dateStr: string): string {
 const STATUS_BADGE: Record<ReportStatus, string> = {
   DRAFT:     'bg-amber-100 text-amber-700',
   SUBMITTED: 'bg-green-100 text-green-700',
+  LATE:      'bg-rose-100 text-rose-700',
 }
 
 // ── Filter state ──────────────────────────────────────────────────────────────
@@ -300,6 +301,7 @@ export default function TeamReportsPage() {
             <option value="">All statuses</option>
             <option value="DRAFT">Draft</option>
             <option value="SUBMITTED">Submitted</option>
+            <option value="LATE">Late</option>
           </select>
         </div>
 

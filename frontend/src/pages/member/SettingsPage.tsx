@@ -3,7 +3,8 @@ import { useMutation } from '@tanstack/react-query'
 import axios from 'axios'
 import InputField from '@/components/ui/InputField'
 import Button from '@/components/ui/Button'
-import { changePassword } from '@/api/auth'
+import { changePassword, getMe } from '@/api/auth'
+import { useAuthStore } from '@/stores/auth'
 
 type FormData = {
   currentPassword: string
@@ -37,13 +38,22 @@ export default function SettingsPage() {
   const [serverError, setServerError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg]   = useState<string | null>(null)
 
+  const { user, token, setAuth } = useAuthStore()
+
   const mutation = useMutation({
     mutationFn: () =>
       changePassword({ currentPassword: form.currentPassword, newPassword: form.newPassword })
         .then((r) => r.data),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setSuccessMsg(data.message)
       setForm(EMPTY_FORM)
+      // Refresh the stored user so mustChangePassword is cleared in the UI
+      try {
+        const { data: freshUser } = await getMe()
+        setAuth(token!, freshUser)
+      } catch {
+        // Ignore refresh errors — next page load will pick up the fresh profile
+      }
     },
     onError: (err: unknown) => {
       if (axios.isAxiosError(err) && err.response?.status === 400) {
@@ -87,6 +97,13 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold text-gray-800">Settings</h1>
         <p className="mt-1 text-sm text-gray-500">Manage your account preferences.</p>
       </div>
+
+      {/* Shown when the admin created this account — user must set their own password */}
+      {user?.mustChangePassword && (
+        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <strong>Action required:</strong> Please change your temporary password before continuing.
+        </div>
+      )}
 
       {/* Change password card */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">

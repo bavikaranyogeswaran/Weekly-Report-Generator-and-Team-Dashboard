@@ -4,6 +4,16 @@ import * as nodemailer from 'nodemailer';
 import type Mail from 'nodemailer/lib/mailer';
 import { Role } from '../common/enums/role.enum';
 
+// Escapes user-supplied strings before embedding them in HTML to prevent XSS
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 @Injectable()
 export class EmailService {
   // null when SMTP_HOST is not configured — we fall back to console logging
@@ -14,10 +24,12 @@ export class EmailService {
 
     // Only create the transporter if SMTP credentials are provided in .env
     if (smtpHost) {
+      const smtpPort = config.get<number>('SMTP_PORT') ?? 587;
       this.transporter = nodemailer.createTransport({
         host: smtpHost,
-        port: config.get<number>('SMTP_PORT') ?? 587,
-        secure: false, // true for port 465, false for 587 (STARTTLS)
+        port: smtpPort,
+        // Port 465 uses SSL/TLS directly; all other ports (587, 25) use STARTTLS
+        secure: smtpPort === 465,
         auth: {
           user: config.get<string>('SMTP_USER'),
           pass: config.get<string>('SMTP_PASS'),
@@ -130,22 +142,25 @@ export class EmailService {
 
   // Simple HTML template for the verification email
   private buildVerificationHtml(name: string, verifyUrl: string): string {
+    const safeName = escapeHtml(name);
+    const safeUrl  = escapeHtml(verifyUrl);
+
     return `
       <!DOCTYPE html>
       <html>
         <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; margin: 0;">
           <div style="max-width: 520px; margin: 0 auto; background: white; border-radius: 10px; padding: 32px;">
             <h2 style="color: #4f46e5; margin-top: 0;">Weekly Report Generator</h2>
-            <p>Hi <strong>${name}</strong>,</p>
+            <p>Hi <strong>${safeName}</strong>,</p>
             <p>Thanks for registering! Click the button below to verify your email address and activate your account.</p>
-            <a href="${verifyUrl}"
+            <a href="${safeUrl}"
                style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px;
                       border-radius: 6px; text-decoration: none; font-weight: bold; margin: 16px 0;">
               Verify Email
             </a>
             <p style="color: #555; font-size: 13px; margin-top: 24px;">
               Or paste this link into your browser:<br/>
-              <a href="${verifyUrl}" style="color: #4f46e5; word-break: break-all;">${verifyUrl}</a>
+              <a href="${safeUrl}" style="color: #4f46e5; word-break: break-all;">${safeUrl}</a>
             </p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
             <p style="color: #999; font-size: 12px; margin: 0;">
@@ -160,7 +175,9 @@ export class EmailService {
   // HTML template for the admin-created invite email.
   // No password is included — the user clicks the button to set their own.
   private buildInviteHtml(name: string, role: Role, inviteUrl: string): string {
-    const roleLabel = role === Role.MANAGER ? 'Manager' : 'Member';
+    const safeName      = escapeHtml(name);
+    const safeUrl       = escapeHtml(inviteUrl);
+    const safeRoleLabel = escapeHtml(role === Role.MANAGER ? 'Manager' : 'Member');
 
     return `
       <!DOCTYPE html>
@@ -168,13 +185,13 @@ export class EmailService {
         <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; margin: 0;">
           <div style="max-width: 520px; margin: 0 auto; background: white; border-radius: 10px; padding: 32px;">
             <h2 style="color: #4f46e5; margin-top: 0;">Weekly Report Generator</h2>
-            <p>Hi <strong>${name}</strong>,</p>
+            <p>Hi <strong>${safeName}</strong>,</p>
             <p>
               An administrator has created an account for you with the role of
-              <strong>${roleLabel}</strong>.
+              <strong>${safeRoleLabel}</strong>.
               Click the button below to set your password and start using the app.
             </p>
-            <a href="${inviteUrl}"
+            <a href="${safeUrl}"
                style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px;
                       border-radius: 6px; text-decoration: none; font-weight: bold; margin: 16px 0;">
               Set your password
@@ -184,7 +201,7 @@ export class EmailService {
             </p>
             <p style="color: #555; font-size: 13px;">
               Or paste this URL into your browser:<br/>
-              <a href="${inviteUrl}" style="color: #4f46e5; word-break: break-all;">${inviteUrl}</a>
+              <a href="${safeUrl}" style="color: #4f46e5; word-break: break-all;">${safeUrl}</a>
             </p>
           </div>
         </body>
@@ -194,15 +211,18 @@ export class EmailService {
 
   // HTML template for the password-reset email
   private buildPasswordResetHtml(name: string, resetUrl: string): string {
+    const safeName = escapeHtml(name);
+    const safeUrl  = escapeHtml(resetUrl);
+
     return `
       <!DOCTYPE html>
       <html>
         <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; margin: 0;">
           <div style="max-width: 520px; margin: 0 auto; background: white; border-radius: 10px; padding: 32px;">
             <h2 style="color: #4f46e5; margin-top: 0;">Weekly Report Generator</h2>
-            <p>Hi <strong>${name}</strong>,</p>
+            <p>Hi <strong>${safeName}</strong>,</p>
             <p>We received a request to reset your password. Click the button below to set a new one.</p>
-            <a href="${resetUrl}"
+            <a href="${safeUrl}"
                style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px;
                       border-radius: 6px; text-decoration: none; font-weight: bold; margin: 16px 0;">
               Reset password
@@ -212,7 +232,7 @@ export class EmailService {
             </p>
             <p style="color: #555; font-size: 13px;">
               Or paste this URL into your browser:<br/>
-              <a href="${resetUrl}" style="color: #4f46e5; word-break: break-all;">${resetUrl}</a>
+              <a href="${safeUrl}" style="color: #4f46e5; word-break: break-all;">${safeUrl}</a>
             </p>
           </div>
         </body>
@@ -222,12 +242,14 @@ export class EmailService {
 
   // HTML template for the role-assignment notification email
   private buildRoleAssignedHtml(name: string, newRole: Role): string {
-    // Tailor the message depending on which role was assigned
     const isManager = newRole === Role.MANAGER;
-    const roleLabel = isManager ? 'Manager' : 'Member';
-    const detail = isManager
-      ? 'You now have access to the team dashboard, can view all submitted reports, and can manage your team.'
-      : 'You can submit weekly reports and track your own progress.';
+    const safeName      = escapeHtml(name);
+    const safeRoleLabel = escapeHtml(isManager ? 'Manager' : 'Member');
+    const safeDetail    = escapeHtml(
+      isManager
+        ? 'You now have access to the team dashboard, can view all submitted reports, and can manage your team.'
+        : 'You can submit weekly reports and track your own progress.',
+    );
 
     return `
       <!DOCTYPE html>
@@ -235,12 +257,12 @@ export class EmailService {
         <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; margin: 0;">
           <div style="max-width: 520px; margin: 0 auto; background: white; border-radius: 10px; padding: 32px;">
             <h2 style="color: #4f46e5; margin-top: 0;">Weekly Report Generator</h2>
-            <p>Hi <strong>${name}</strong>,</p>
+            <p>Hi <strong>${safeName}</strong>,</p>
             <p>
               Your account role has been updated by a manager.
-              You are now a <strong>${roleLabel}</strong>.
+              You are now a <strong>${safeRoleLabel}</strong>.
             </p>
-            <p style="color: #555;">${detail}</p>
+            <p style="color: #555;">${safeDetail}</p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
             <p style="color: #999; font-size: 12px; margin: 0;">
               If you believe this was done in error, please contact your manager.

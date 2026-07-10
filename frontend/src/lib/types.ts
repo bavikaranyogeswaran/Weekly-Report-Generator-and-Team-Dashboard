@@ -19,11 +19,13 @@ export type AuthUser = {
   email: string
   role: Role
   isVerified: boolean
+  // True for admin-created accounts until the user changes their invite password
+  mustChangePassword: boolean
   createdAt: string
 }
 
 // Mirrors the ReportStatus enum from the backend
-export type ReportStatus = 'DRAFT' | 'SUBMITTED'
+export type ReportStatus = 'DRAFT' | 'SUBMITTED' | 'LATE'
 
 // Full report object as returned by the API
 export type Report = {

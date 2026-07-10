@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { Project } from '../projects/entities/project.entity';
 import { Report } from '../reports/entities/report.entity';
 import { ReportStatus } from '../common/enums/report-status.enum';
 import { Role } from '../common/enums/role.enum';
+import { ConfigService } from '@nestjs/config';
+import { DateUtilsService } from '../common/date-utils.service';
 
 @Injectable()
 export class DashboardService {
@@ -20,13 +21,15 @@ export class DashboardService {
     @InjectRepository(Report)
     private readonly reportsRepo: Repository<Report>,
 
-    // Used to read APP_TIMEZONE — never hardcode the timezone
     private readonly config: ConfigService,
+
+    // Shared timezone-aware week-boundary calculator
+    private readonly dateUtils: DateUtilsService,
   ) {}
 
   // Returns five headline numbers for the top stat tiles on the manager dashboard
   async getSummary() {
-    const weekStart = this.getCurrentWeekMonday();
+    const weekStart = this.dateUtils.getCurrentWeekMonday();
 
     const [totalUsers, memberCount, totalProjects, submittedThisWeek, openBlockers] = await Promise.all([
       this.usersRepo.count(), // all roles — for the "total users" stat tile
@@ -66,7 +69,7 @@ export class DashboardService {
     // Use the provided date or fall back to this week's Monday in the configured timezone
     const targetDate = weekStart
       ? this.parseDateString(weekStart)
-      : this.getCurrentWeekMonday();
+      : this.dateUtils.getCurrentWeekMonday();
 
     // Fetch all users and all reports for the target week in parallel
     const [users, reports] = await Promise.all([
@@ -80,10 +83,11 @@ export class DashboardService {
     // Build a userId → status map for O(1) lookup per user
     const reportMap = new Map(reports.map((r) => [r.userId, r.status]));
 
-    return users.map(({ passwordHash: _pw, ...safeUser }) => ({
-      user: safeUser,
+    // passwordHash is excluded by ClassSerializerInterceptor via @Exclude() on the User entity
+    return users.map((user) => ({
+      user,
       // SUBMITTED / DRAFT come from the report; no report at all = MISSING
-      status: reportMap.get(safeUser.id) ?? 'MISSING',
+      status: reportMap.get(user.id) ?? 'MISSING',
       weekStart: targetDate.toLocaleDateString('en-CA', { timeZone: tz }),
     }));
   }
@@ -98,14 +102,8 @@ export class DashboardService {
       take: limit, // cap results — default 10, caller can request more
     });
 
-    // Strip passwordHash from every nested user before returning
-    return reports.map((r) => {
-      if (r.user) {
-        const { passwordHash: _pw, ...safeUser } = r.user as any;
-        (r as any).user = safeUser;
-      }
-      return r;
-    });
+    // passwordHash excluded from nested users by ClassSerializerInterceptor via @Exclude()
+    return reports;
   }
 
   // Returns total hours worked, grouped by either project or user.
@@ -166,7 +164,7 @@ export class DashboardService {
   async getWeeklyTrends(weeks = 8) {
     const tz = this.config.get<string>('APP_TIMEZONE') ?? 'Asia/Colombo';
 
-    const currentMonday = this.getCurrentWeekMonday();
+    const currentMonday = this.dateUtils.getCurrentWeekMonday();
 
     // Build YYYY-MM-DD labels for the last N weeks, oldest first
     const weekLabels: string[] = [];
@@ -216,23 +214,5 @@ export class DashboardService {
   private parseDateString(dateStr: string): Date {
     const [year, month, day] = dateStr.split('-').map(Number);
     return new Date(year, month - 1, day);
-  }
-
-  // Returns the Date of the Monday that started the current week, in the configured timezone.
-  // Using APP_TIMEZONE ensures week boundaries align with the team's local calendar.
-  protected getCurrentWeekMonday(): Date {
-    const tz = this.config.get<string>('APP_TIMEZONE') ?? 'Asia/Colombo';
-
-    // Get today's date as YYYY-MM-DD in the configured timezone (en-CA locale gives this format)
-    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: tz });
-
-    // Parse the date parts and build a local-midnight Date
-    const [year, month, day] = todayStr.split('-').map(Number);
-    const today = new Date(year, month - 1, day);
-
-    // Shift back to the most recent Monday (Sunday = 0, so Sunday goes back 6 days)
-    const dayOfWeek = today.getDay();
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    return new Date(year, month - 1, day + daysToMonday);
   }
 }

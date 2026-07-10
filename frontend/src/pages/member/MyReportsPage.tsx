@@ -17,8 +17,9 @@ function formatDate(dateStr: string): string {
 }
 
 const statusBadgeClass: Record<string, string> = {
-  DRAFT: 'bg-amber-100 text-amber-700',
+  DRAFT:     'bg-amber-100 text-amber-700',
   SUBMITTED: 'bg-green-100 text-green-700',
+  LATE:      'bg-rose-100 text-rose-700',
 }
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────

@@ -92,7 +92,7 @@ export class ReportsService {
       .getManyAndCount();
 
     return {
-      data: reports.map((r) => this.stripUserPassword(r)),
+      data: reports, // passwordHash excluded by ClassSerializerInterceptor via @Exclude()
       total,
       page,
       limit,
@@ -116,7 +116,7 @@ export class ReportsService {
       throw new ForbiddenException('You can only view your own reports');
     }
 
-    return this.stripUserPassword(report);
+    return report;
   }
 
   // Applies a partial update — only DRAFT reports can be edited, and only by their owner
@@ -144,7 +144,7 @@ export class ReportsService {
 
     Object.assign(report, dto);
     const saved = await this.reportsRepo.save(report);
-    return this.stripUserPassword(saved);
+    return saved;
   }
 
   // Submits a DRAFT report — sets status to SUBMITTED and records the timestamp
@@ -157,8 +157,7 @@ export class ReportsService {
 
     report.status = ReportStatus.SUBMITTED;
     report.submittedAt = new Date();
-    const saved = await this.reportsRepo.save(report);
-    return this.stripUserPassword(saved);
+    return this.reportsRepo.save(report);
   }
 
   // Deletes a report — only the owner can delete, and only while it is still a DRAFT
@@ -171,14 +170,5 @@ export class ReportsService {
 
     await this.reportsRepo.remove(report);
     return { message: 'Report deleted successfully' };
-  }
-
-  // Removes passwordHash from the nested user object on a report
-  private stripUserPassword(report: Report): Report {
-    if (report.user) {
-      const { passwordHash: _pw, ...safeUser } = report.user as any;
-      (report as any).user = safeUser;
-    }
-    return report;
   }
 }

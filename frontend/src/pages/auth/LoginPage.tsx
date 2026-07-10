@@ -60,7 +60,13 @@ export default function LoginPage() {
       // Step 3: persist token + user to Zustand (and localStorage via persist middleware)
       setAuth(loginData.access_token, user)
 
-      // Step 4: redirect to the correct landing page based on role
+      // Step 4: force password change for admin-created accounts before going anywhere else
+      if (user.mustChangePassword) {
+        navigate('/settings', { replace: true })
+        return
+      }
+
+      // Step 5: redirect to the correct landing page based on role
       const destination =
         user.role === 'ADMIN'   ? '/admin/users' :
         user.role === 'MANAGER' ? '/dashboard'   : '/reports'
